@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <meta name="theme-color" content="#0a0706" id="metaTheme"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <link rel="icon" type="image/png" id="favicon" href="images/favicon.png"/>
+  <title>Hotel Menu</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Jost:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════
+     PARTICLES LAYER — ambient floating dots
+══════════════════════════════════════════════ -->
+<canvas id="particleCanvas"></canvas>
+
+<!-- ══════════════════════════════════════════════
+     SCREEN 1 — WELCOME
+══════════════════════════════════════════════ -->
+<section id="welcome" class="screen active">
+  <div class="welcome-bg"></div>
+  <div class="welcome-grain"></div>
+
+  <div class="welcome-content">
+
+    <div class="welcome-top fade-up">
+      <span class="hotel-badge">
+        <span class="badge-dot"></span>
+        Fine Dining Experience
+        <span class="badge-dot"></span>
+      </span>
+    </div>
+
+    <div class="fade-up delay-1">
+      <h1 class="welcome-hotel-name serif"></h1>
+    </div>
+
+    <p class="welcome-tagline fade-up delay-2"></p>
+
+    <div class="guest-card fade-up delay-3">
+      <div class="guest-card-header">
+        <span class="guest-card-icon">👋</span>
+        <span class="guest-card-title">Welcome, Guest!</span>
+      </div>
+      <div id="guestForm"></div>
+      <button class="btn-primary ripple" onclick="App.enterMenu()">
+        <span>Explore the Menu</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+      </button>
+    </div>
+
+    <p class="welcome-disclaimer fade-up delay-4">
+      By placing an order you agree to our dining terms &amp; conditions
+    </p>
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════════════════════
+     SCREEN 2 — MENU
+══════════════════════════════════════════════ -->
+<section id="menu" class="screen">
+
+  <header class="menu-header" id="menuHeader">
+    <div class="menu-header-inner">
+      <div class="header-left">
+        <img id="headerLogo" class="header-logo" src="" alt="Logo" style="display:none"/>
+        <div class="header-hotel-name" id="headerHotelName"></div>
+      </div>
+      <div class="header-right">
+        <button class="cart-btn ripple" onclick="App.openCart()" aria-label="Open cart">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <path d="M16 10a4 4 0 01-8 0"/>
+          </svg>
+          <span class="cart-count" id="cartCount"></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero banner -->
+  <div class="menu-hero" id="menuHero">
+    <img id="heroBanner" src="" alt="Restaurant" loading="eager" onload="this.classList.add('loaded')"/>
+    <div class="menu-hero-overlay"></div>
+    <div class="menu-hero-content">
+      <div class="guest-chip" id="guestChip"></div>
+      <div class="hero-scroll-hint">
+        <span>Scroll to explore</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10l5 5 5-5"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- Category tabs -->
+  <div class="cat-tabs-wrap" id="catTabsWrap">
+    <div class="cat-tabs" id="catTabs"></div>
+  </div>
+
+  <!-- Search bar -->
+  <div class="search-wrap">
+    <div class="search-inner">
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+      </svg>
+      <input id="menuSearch" type="text" placeholder="Search dishes, cuisines…" autocomplete="off"/>
+      <button class="search-clear" id="searchClear" onclick="Menu.clearSearch()" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="menu-body" id="menuBody"></div>
+
+  <section class="store-location">
+    <div class="store-loc-icon">📍</div>
+    <h2>Find Us</h2>
+    <p>Visit our restaurant — we'd love to serve you again.</p>
+    <a id="mapBtn" href="#" target="_blank" class="ripple">Open in Google Maps</a>
+  </section>
+
+</section>
+
+
+<!-- ══════════════════════════════════════════════
+     SCREEN 3 — SUCCESS
+══════════════════════════════════════════════ -->
+<section id="success" class="screen">
+  <div class="success-bg-burst"></div>
+
+  <div class="success-inner">
+
+    <div class="success-anim-wrap">
+      <div class="success-rings">
+        <div class="success-ring-pulse r1"></div>
+        <div class="success-ring-pulse r2"></div>
+        <div class="success-ring-pulse r3"></div>
+      </div>
+      <svg class="success-check-svg" viewBox="0 0 52 52">
+        <circle class="success-circle" cx="26" cy="26" r="23" fill="none"/>
+        <path class="success-check-path" fill="none" d="M14 26 l8 8 l16-16"/>
+      </svg>
+    </div>
+
+    <div class="success-text-block">
+      <p class="success-sub">Order received</p>
+      <h2 class="success-title serif">Your Order is<em>Confirmed!</em></h2>
+    </div>
+
+    <div class="success-type-pill" id="successType">🍽️ Dine-In</div>
+
+    <div class="success-cards" id="successCards">
+      <div class="s-card" id="successTableCard">
+        <span class="s-card-icon">🪑</span>
+        <span class="s-card-label">Table</span>
+        <span class="s-card-value" id="successTable">—</span>
+      </div>
+      <div class="s-card" id="successNameCard" style="display:none">
+        <span class="s-card-icon">👤</span>
+        <span class="s-card-label">Guest</span>
+        <span class="s-card-value s-card-value--sm" id="successName"></span>
+      </div>
+      <div class="s-card s-card--wide" id="successAddrCard" style="display:none">
+        <span class="s-card-icon">📍</span>
+        <span class="s-card-label">Delivery To</span>
+        <span class="s-card-value s-card-value--addr" id="successAddr"></span>
+      </div>
+    </div>
+
+    <p class="success-msg">Your order has been sent via WhatsApp.<br/>We'll start preparing it right away!</p>
+
+    <div class="success-round-note" id="successRound" style="display:none">
+      ➕ Additional items added to your existing order
+    </div>
+
+    <div class="success-actions">
+      <button class="success-btn-more ripple" onclick="App.goBackToMenu()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Add More
+      </button>
+      <button class="success-btn-new ripple" onclick="App.startFreshOrder()">
+        🔄 New Order
+      </button>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════════════════════
+     CART DRAWER
+══════════════════════════════════════════════ -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="App.closeCart()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-handle-wrap">
+    <div class="drawer-handle"></div>
+  </div>
+  <div class="drawer-header">
+    <div>
+      <h3 class="drawer-title serif">Your Order <span id="drawerCount"></span></h3>
+      <p class="drawer-subtitle" id="drawerItemCount">0 items</p>
+    </div>
+    <button class="drawer-close ripple" onclick="App.closeCart()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+
+  <div class="drawer-items" id="drawerItems"></div>
+
+  <div class="notes-section">
+    <span class="notes-label">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;margin-right:4px;vertical-align:middle"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Special Instructions
+    </span>
+    <textarea class="notes-input" id="orderNotes" rows="2" placeholder="Allergies, spice level, special requests…"></textarea>
+  </div>
+
+  <div class="drawer-footer">
+    <div class="order-totals-row">
+      <div class="order-summary-item">
+        <span class="osi-label">Items</span>
+        <span class="osi-val" id="drawerItemCount2">0</span>
+      </div>
+      <div class="order-summary-divider"></div>
+      <div class="order-summary-item">
+        <span class="osi-label">Total</span>
+        <span class="osi-val osi-total" id="drawerTotal">₹0</span>
+      </div>
+    </div>
+
+    <button class="proceed-btn ripple" onclick="App.openOrderTypeModal()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;flex-shrink:0"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      Proceed to Order
+    </button>
+
+    <button class="add-more-btn" id="addMoreBtn" style="display:none" onclick="App.closeCart(); App.goBackToMenu();">
+      ＋ Add More Items to Order
+    </button>
+    <button class="fresh-order-btn" id="freshOrderBtn" style="display:none" onclick="App.startFreshOrder()">
+      🔄 Start New Order
+    </button>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════
+     FLOATING CART BAR
+══════════════════════════════════════════════ -->
+<div class="cart-bar" id="cartBar" onclick="App.openCart()">
+  <div class="cart-bar-inner">
+    <div class="cart-bar-left">
+      <span class="cart-bar-count" id="barCount">0 items</span>
+      <span class="cart-bar-amount" id="barAmount">₹0</span>
+    </div>
+    <span class="cart-bar-cta">
+      View Order
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </span>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════
+     ORDER TYPE MODAL
+══════════════════════════════════════════════ -->
+<div class="order-modal-overlay" id="orderTypeModal" onclick="if(event.target===this) App.closeOrderTypeModal()">
+  <div class="order-modal">
+
+    <!-- Step 1: Choose -->
+    <div class="order-step active" id="stepChoose">
+      <div class="order-modal-handle"></div>
+      <h3 class="order-modal-title serif">How would you like your order?</h3>
+      <div class="order-type-options">
+        <button class="order-type-btn ripple" onclick="App.selectOrderType('dine')">
+          <div class="otb-icon-wrap">🍽️</div>
+          <span class="otb-label">Dine-In</span>
+          <span class="otb-sub">Eat at the restaurant</span>
+        </button>
+        <button class="order-type-btn ripple" onclick="App.selectOrderType('delivery')">
+          <div class="otb-icon-wrap">🛵</div>
+          <span class="otb-label">Home Delivery</span>
+          <span class="otb-sub">Delivered to your door</span>
+        </button>
+      </div>
+      <button class="order-modal-cancel" onclick="App.closeOrderTypeModal()">Cancel</button>
+    </div>
+
+    <!-- Step 2a: Dine-In -->
+    <div class="order-step" id="stepDineIn">
+      <div class="order-modal-handle"></div>
+      <button class="order-modal-back" onclick="App.openOrderTypeModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Back
+      </button>
+      <h3 class="order-modal-title serif">🍽️ Dine-In Details</h3>
+      <div class="field-group">
+        <label class="field-label" for="orderTable">Table Number <span class="req-tag">*required</span></label>
+        <input id="orderTable" type="number" class="field-input" placeholder="e.g. 5" inputmode="numeric" min="1" max="999" autocomplete="off"/>
+      </div>
+      <button class="whatsapp-btn ripple" style="margin-top:12px" onclick="App.confirmDineIn()">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        Send Order via WhatsApp
+      </button>
+    </div>
+
+    <!-- Step 2b: Delivery -->
+    <div class="order-step" id="stepDelivery">
+      <div class="order-modal-handle"></div>
+      <button class="order-modal-back" onclick="App.openOrderTypeModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Back
+      </button>
+      <h3 class="order-modal-title serif">🛵 Delivery Details</h3>
+      <div class="field-group">
+        <label class="field-label" for="deliveryName">Full Name <span class="req-tag">*required</span></label>
+        <input id="deliveryName" type="text" class="field-input" placeholder="e.g. Rahul Sharma" autocomplete="name" autocapitalize="words"/>
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="deliveryMobile">Mobile Number <span class="req-tag">*required</span></label>
+        <input id="deliveryMobile" type="tel" class="field-input" placeholder="10-digit mobile number" inputmode="tel" maxlength="10" autocomplete="tel"/>
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="deliveryAddress">Delivery Address <span class="req-tag">*required</span></label>
+        <textarea id="deliveryAddress" class="field-input field-textarea" placeholder="House/Flat no., Street, Area, City, Pincode" rows="3" autocomplete="street-address"></textarea>
+      </div>
+      <button class="whatsapp-btn ripple" style="margin-top:12px" onclick="App.confirmDelivery()">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        Send Order via WhatsApp
+      </button>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════
+     TOAST
+══════════════════════════════════════════════ -->
+<div class="toast" id="toast" role="status" aria-live="polite">
+  <span class="toast-icon" id="toastIcon">✓</span>
+  <span id="toastMsg"></span>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/app.js"></script>
+<script src="js/menu.js"></script>
+<script src="js/cart.js"></script>
+</body>
+</html>
