@@ -633,6 +633,7 @@ input,textarea{font-family:inherit;color:inherit}
 .drawer-items{
   flex:1;overflow-y:auto;padding:.75rem 1.25rem;
   display:flex;flex-direction:column;gap:8px;
+  min-height:0;
 }
 
 .cart-item{
@@ -674,6 +675,8 @@ input,textarea{font-family:inherit;color:inherit}
   padding:1rem 1.25rem;flex-shrink:0;
   border-top:1px solid var(--border);
   display:flex;flex-direction:column;gap:10px;
+  overflow-y:auto;
+  max-height:55vh;
 }
 
 .order-totals-row{
@@ -686,6 +689,79 @@ input,textarea{font-family:inherit;color:inherit}
 .osi-val{font-size:16px;font-weight:700;color:var(--text)}
 .osi-total{color:var(--accent)}
 .order-summary-divider{width:1px;height:36px;background:var(--border);flex-shrink:0}
+
+/* Drawer round-by-round breakdown */
+/* .drawer-rounds-breakdown {
+  background: rgba(255,255,255,.04);
+  border-radius: 12px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.drb-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: var(--text2);
+}
+.drb-row.drb-delivery {
+  color: #f59e0b;
+  font-weight: 600;
+}
+.drb-row.drb-grand {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--accent);
+  border-top: 1px solid var(--border);
+  padding-top: 6px;
+  margin-top: 2px;
+}
+.drb-label { }
+.drb-amt   { font-weight: 700; } */
+.drawer-rounds-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 14px;
+  margin: 0 0 8px 0;
+  background: var(--surface2);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+.drb-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12.5px;
+  color: var(--text2);
+  padding: 2px 0;
+}
+
+.drb-current {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.drb-delivery {
+  color: #f59e0b;
+}
+
+.drb-grand {
+  border-top: 1px solid var(--border2);
+  margin-top: 4px;
+  padding-top: 6px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.drb-amt {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
 
 .proceed-btn{
   display:flex;align-items:center;justify-content:center;gap:10px;
@@ -1481,6 +1557,27 @@ input,textarea{font-family:inherit;color:inherit}
   margin-top: 4px;
   border-top: 1px solid var(--border2);
   font-family: 'Cormorant Garamond', serif;
+}
+/* ── Back to Menu from Bill ─────────────────── */
+.bill-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: 1.5px solid var(--border2);
+  color: var(--text2);
+  font-family: 'Jost', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 16px;
+  border-radius: 12px;
+  margin: 16px 20px 0;
+  cursor: pointer;
+  transition: color .2s, border-color .2s;
+}
+.bill-back-btn:active {
+  color: var(--text);
+  border-color: var(--accent);
 }
 
 /* ── Bill Delivery Charge Row ─────────────────── */

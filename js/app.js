@@ -229,30 +229,65 @@ const App = (() => {
   //   }
   //   if (lastPage && lastPage !== 'welcome') { Menu.init(); _showScreen(lastPage); }
   // }
-    function _restoreSession() {
-      const lastPage = localStorage.getItem('currentPage');
-      if (_guest && (_guest.name || _guest.mobile || _guest.table)) {
-        const ni = document.getElementById('fieldName');
-        const mi = document.getElementById('fieldMobile');
-        if (ni) ni.value = _guest.name   || '';
-        if (mi) mi.value = _guest.mobile || '';
-        _updateGuestChip();
+
+  // function _restoreSession() {
+  //   const lastPage = localStorage.getItem('currentPage');
+  //   if (_guest && (_guest.name || _guest.mobile || _guest.table)) {
+  //     const ni = document.getElementById('fieldName');
+  //     const mi = document.getElementById('fieldMobile');
+  //     if (ni) ni.value = _guest.name   || '';
+  //     if (mi) mi.value = _guest.mobile || '';
+  //     _updateGuestChip();
+  //   }
+  //   if (lastPage && lastPage !== 'welcome') {
+  //     Menu.init();
+  //     _showScreen(lastPage);
+  //     // Re-render bill screen if user was on it when they refreshed
+  //     if (lastPage === 'bill') {
+  //       const orders = Cart.getPreviousOrders();
+  //       if (orders && orders.length > 0) {
+  //         _renderBill(orders);
+  //       } else {
+  //         // No orders to show — fall back to menu
+  //         _showScreen('menu');
+  //       }
+  //     }
+  //   }
+  // }
+
+  function _restoreSession() {
+    const lastPage = localStorage.getItem('currentPage');
+    if (_guest && (_guest.name || _guest.mobile || _guest.table)) {
+      const ni = document.getElementById('fieldName');
+      const mi = document.getElementById('fieldMobile');
+      if (ni) ni.value = _guest.name   || '';
+      if (mi) mi.value = _guest.mobile || '';
+      _updateGuestChip();
+    }
+    if (lastPage && lastPage !== 'welcome') {
+      Menu.init();
+      _showScreen(lastPage);
+
+      if (lastPage === 'bill') {
+        const orders = Cart.getPreviousOrders();
+        if (orders && orders.length > 0) {
+          _renderBill(orders);
+        } else {
+          _showScreen('menu');
+        }
       }
-      if (lastPage && lastPage !== 'welcome') {
-        Menu.init();
-        _showScreen(lastPage);
-        // Re-render bill screen if user was on it when they refreshed
-        if (lastPage === 'bill') {
-          const orders = Cart.getPreviousOrders();
-          if (orders && orders.length > 0) {
-            _renderBill(orders);
-          } else {
-            // No orders to show — fall back to menu
-            _showScreen('menu');
-          }
+
+      if (lastPage === 'success') {
+        const savedResult = localStorage.getItem('hotel_last_result');
+        if (savedResult) {
+          _renderSuccess(JSON.parse(savedResult));
+        } else {
+          // No result saved — fall back to menu
+          _showScreen('menu');
         }
       }
     }
+  }
 
   /* ═══════════════════════ SCREENS ═══════════════════════════ */
   function _showScreen(id) {
@@ -279,6 +314,7 @@ const App = (() => {
     Cart.startFreshOrder();
     localStorage.removeItem('hotel_guest');
     localStorage.removeItem('currentPage');
+    localStorage.removeItem('hotel_last_result'); 
     _guest = { name: '', mobile: '', table: '' };
     ['fieldName','fieldMobile'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
     _showScreen('welcome');
@@ -286,6 +322,11 @@ const App = (() => {
 
   function goBackToMenu() {
     closeCart();
+    _showScreen('menu');
+    Cart.renderDrawer();
+  }
+
+  function goBackToMenuFromBill() {
     _showScreen('menu');
     Cart.renderDrawer();
   }
@@ -310,6 +351,18 @@ const App = (() => {
     if (Cart.isEmpty()) { showToast('Please add items first', '🛒'); return; }
     const isAdditional = Cart.getPreviousOrders().length > 0;
     // If additional round and previous order was dine-in with a known table, skip straight to dine-in step
+    // if (isAdditional) {
+    //   const prevOrders = Cart.getPreviousOrders();
+    //   const lastOrder = prevOrders[prevOrders.length - 1];
+    //   if (lastOrder && lastOrder.orderType === 'dine-in' && (lastOrder.table || _guest.table)) {
+    //     if (!_guest.table && lastOrder.table) _guest.table = lastOrder.table;
+    //     document.getElementById('orderTypeModal').classList.add('show');
+    //     _showOrderStep('stepDineIn');
+    //     const ti = document.getElementById('orderTable');
+    //     if (ti) ti.value = _guest.table || lastOrder.table || '';
+    //     return;
+    //   }
+    // }
     if (isAdditional) {
       const prevOrders = Cart.getPreviousOrders();
       const lastOrder = prevOrders[prevOrders.length - 1];
@@ -319,6 +372,19 @@ const App = (() => {
         _showOrderStep('stepDineIn');
         const ti = document.getElementById('orderTable');
         if (ti) ti.value = _guest.table || lastOrder.table || '';
+        return;
+      }
+      // If additional round and previous order was home delivery, skip straight to delivery step
+      if (lastOrder && lastOrder.orderType === 'delivery') {
+        document.getElementById('orderTypeModal').classList.add('show');
+        _showOrderStep('stepDelivery');
+        const ni = document.getElementById('deliveryName');
+        const mi = document.getElementById('deliveryMobile');
+        const ai = document.getElementById('deliveryAddress');
+        if (ni && _guest.name)    ni.value = _guest.name;
+        if (mi && _guest.mobile)  mi.value = _guest.mobile;
+        if (ai && _guest.address) ai.value = _guest.address;
+        _updateDeliveryTotals();
         return;
       }
     }
@@ -355,18 +421,164 @@ const App = (() => {
     }
   }
 
+  // function backToOrderTypeChoice() {
+  //   _showOrderStep('stepChoose');
+  // }
+
   function _updateDeliveryTotals() {
     const { subtotal } = Cart.getTotals();
     const currency = HOTEL_CONFIG.currency;
-    const deliveryCharge = 40;
-    const grandTotal = subtotal + deliveryCharge;
-    const subEl   = document.getElementById('deliverySubtotalDisplay');
-    const totalEl = document.getElementById('deliveryGrandTotalDisplay');
-    const chargeEl = document.getElementById('deliveryChargeDisplay');
-    if (subEl)    subEl.textContent   = `${currency}${subtotal}`;
-    if (totalEl)  totalEl.textContent = `${currency}${grandTotal}`;
-    if (chargeEl) chargeEl.textContent = `+ ${currency}${deliveryCharge} delivery charge added`;
+    const previousOrders = Cart.getPreviousOrders();
+    const isAddOnRound = previousOrders.length > 0;
+    // const prevSubtotal = previousOrders.reduce((s, r) => s + r.total, 0);
+    // const foodSubtotal = prevSubtotal + subtotal;
+    // const deliveryCharge = isAddOnRound ? 0 : (HOTEL_CONFIG.deliveryCharge || 0);
+    // const grandTotal = foodSubtotal + deliveryCharge;
+    const prevSubtotal = previousOrders.reduce((s, r) => s + r.total, 0);
+    const foodSubtotal = prevSubtotal + subtotal;
+    const deliveryCharge = HOTEL_CONFIG.deliveryCharge || 0; // always the real charge
+    const grandTotal = foodSubtotal + deliveryCharge;        // always include it in total
+
+    const subEl         = document.getElementById('deliverySubtotalDisplay');
+    const totalEl       = document.getElementById('deliveryGrandTotalDisplay');
+    const chargeEl      = document.getElementById('deliveryChargeDisplay');
+    const badgeEl       = document.getElementById('deliveryChargeBadge');
+    const totalChargeEl = document.getElementById('deliveryChargeTotal');
+    const bannerEl      = document.getElementById('deliveryChargeBanner');
+    const dtsDeliveryRow = document.querySelector('.dts-delivery');
+    const dtsDeliveryAmt = dtsDeliveryRow ? dtsDeliveryRow.querySelector('span:last-child') : null;
+    const dtsDeliveryLabel = dtsDeliveryRow ? dtsDeliveryRow.querySelector('span:first-child') : null;
+
+    // Update food subtotal label to show breakdown if add-on round
+    const dtsSubtotalRow = document.querySelector('.delivery-total-summary .dts-row:first-child span:first-child');
+    if (dtsSubtotalRow) {
+      dtsSubtotalRow.textContent = isAddOnRound
+        ? `Food Subtotal (${previousOrders.length + 1} rounds)`
+        : 'Food Subtotal';
+    }
+
+    if (subEl)   subEl.textContent   = `${currency}${foodSubtotal}`;
+    if (totalEl) totalEl.textContent = `${currency}${grandTotal}`;
+
+    // if (isAddOnRound) {
+    //   // Hide top banner on additional rounds
+    //   if (bannerEl) bannerEl.style.display = 'none';
+    //   if (chargeEl) chargeEl.textContent   = '';
+    //   if (badgeEl)  badgeEl.textContent    = '';
+
+    //   // Show delivery row as already included
+    //   if (dtsDeliveryRow)  dtsDeliveryRow.style.display  = '';
+    //   if (dtsDeliveryLabel) dtsDeliveryLabel.textContent = '🛵 Delivery Charge';
+    //   if (dtsDeliveryAmt) {
+    //     dtsDeliveryAmt.textContent  = '✓ Already charged';
+    //     dtsDeliveryAmt.style.color  = 'var(--text3)';
+    //     dtsDeliveryAmt.style.fontSize = '12px';
+    //   }
+    //   if (totalChargeEl) totalChargeEl.textContent = `${currency}0`;
+    if (isAddOnRound) {
+      // Hide top banner on additional rounds
+      if (bannerEl) bannerEl.style.display = 'none';
+      if (chargeEl) chargeEl.textContent   = '';
+      if (badgeEl)  badgeEl.textContent    = '';
+
+      if (dtsDeliveryRow)  dtsDeliveryRow.style.display  = '';
+      if (dtsDeliveryLabel) dtsDeliveryLabel.textContent = '🛵 Delivery Charge';
+      if (dtsDeliveryAmt) {
+        dtsDeliveryAmt.textContent    = `+ ${currency}${HOTEL_CONFIG.deliveryCharge || 0}`;  // ← show actual charge
+        dtsDeliveryAmt.style.color    = '';   // ← reset color
+        dtsDeliveryAmt.style.fontSize = '';   // ← reset font size
+      }
+      if (totalChargeEl) totalChargeEl.textContent = `+ ${currency}${HOTEL_CONFIG.deliveryCharge || 0}`;  // ← fix this too
+
+    } else {
+      // First round — show banner and full delivery charge
+      if (bannerEl) bannerEl.style.display = '';
+      if (chargeEl) chargeEl.textContent   = `+ ${currency}${HOTEL_CONFIG.deliveryCharge || 0} delivery charge added`;
+      if (badgeEl)  badgeEl.textContent    = `${currency}${HOTEL_CONFIG.deliveryCharge || 0}`;
+
+      if (dtsDeliveryRow)  dtsDeliveryRow.style.display  = '';
+      if (dtsDeliveryLabel) dtsDeliveryLabel.textContent = '🛵 Delivery Charge';
+      if (dtsDeliveryAmt) {
+        dtsDeliveryAmt.textContent    = `+ ${currency}${HOTEL_CONFIG.deliveryCharge || 0}`;
+        dtsDeliveryAmt.style.color    = '';
+        dtsDeliveryAmt.style.fontSize = '';
+      }
+      if (totalChargeEl) totalChargeEl.textContent = `+ ${currency}${HOTEL_CONFIG.deliveryCharge || 0}`;
+    }
   }
+
+  // function _updateDeliveryTotals() {
+  //   const { subtotal } = Cart.getTotals();
+  //   const currency = HOTEL_CONFIG.currency;
+  //   // const deliveryCharge = 40;
+  //   const deliveryCharge = HOTEL_CONFIG.deliveryCharge || 0;
+  //   const grandTotal = subtotal + deliveryCharge;
+  //   const subEl   = document.getElementById('deliverySubtotalDisplay');
+  //   const totalEl = document.getElementById('deliveryGrandTotalDisplay');
+  //   const chargeEl = document.getElementById('deliveryChargeDisplay');
+  //   if (subEl)    subEl.textContent   = `${currency}${subtotal}`;
+  //   if (totalEl)  totalEl.textContent = `${currency}${grandTotal}`;
+  //   // if (chargeEl) chargeEl.textContent = `+ ${currency}${deliveryCharge} delivery charge added`;
+  //   if (chargeEl) chargeEl.textContent = `+ ${currency}${deliveryCharge} delivery charge added`;
+  //   const badgeEl = document.getElementById('deliveryChargeBadge');
+  //   const totalChargeEl = document.getElementById('deliveryChargeTotal');
+  //   if (badgeEl) badgeEl.textContent = `${currency}${deliveryCharge}`;
+  //   if (totalChargeEl) totalChargeEl.textContent = `+ ${currency}${deliveryCharge}`;
+  // }
+
+  // function _updateDeliveryTotals() {
+  //   const { subtotal } = Cart.getTotals();
+  //   const currency = HOTEL_CONFIG.currency;
+  //   const previousOrders = Cart.getPreviousOrders();
+  //   const isAddOnRound = previousOrders.length > 0;
+  //   const prevSubtotal = previousOrders.reduce((s, r) => s + r.total, 0);
+  //   const foodSubtotal = prevSubtotal + subtotal;
+
+  //   // Delivery charge only applies once (first round)
+  //   const deliveryCharge = isAddOnRound ? 0 : (HOTEL_CONFIG.deliveryCharge || 0);
+  //   const grandTotal = foodSubtotal + deliveryCharge;
+
+  //   const subEl      = document.getElementById('deliverySubtotalDisplay');
+  //   const totalEl    = document.getElementById('deliveryGrandTotalDisplay');
+  //   const chargeEl   = document.getElementById('deliveryChargeDisplay');
+  //   const badgeEl    = document.getElementById('deliveryChargeBadge');
+  //   const totalChargeEl = document.getElementById('deliveryChargeTotal');
+  //   const bannerEl   = document.getElementById('deliveryChargeBanner');
+
+  //   if (subEl)   subEl.textContent   = `${currency}${foodSubtotal}`;
+  //   if (totalEl) totalEl.textContent = `${currency}${grandTotal}`;
+
+  //   if (isAddOnRound) {
+  //     // Hide delivery charge banner and row on additional rounds
+  //     if (bannerEl)      bannerEl.style.display      = 'none';
+  //     if (chargeEl)      chargeEl.textContent        = '';
+  //     if (badgeEl)       badgeEl.textContent         = '';
+  //     if (totalChargeEl) totalChargeEl.textContent   = `${currency}0`;
+
+  //     // Hide the delivery charge row in the summary
+  //     // const dtsDeliveryRow = document.querySelector('.dts-delivery');
+  //     // if (dtsDeliveryRow) dtsDeliveryRow.style.display = 'none';
+  //     // Show delivery row as already included
+  //     const dtsDeliveryRow = document.querySelector('.dts-delivery');
+  //     if (dtsDeliveryRow) {
+  //       dtsDeliveryRow.style.display = '';
+  //       const dtsDeliveryLabel = dtsDeliveryRow.querySelector('span:first-child');
+  //       const dtsDeliveryAmt   = dtsDeliveryRow.querySelector('span:last-child');
+  //       if (dtsDeliveryLabel) dtsDeliveryLabel.textContent = '🛵 Delivery Charge';
+  //       if (dtsDeliveryAmt)   dtsDeliveryAmt.textContent   = '✓ Already charged';
+  //       dtsDeliveryAmt.style.color = 'var(--text3)';
+  //       dtsDeliveryAmt.style.fontSize = '12px';
+  //     }
+  //   } else {
+  //     if (bannerEl)      bannerEl.style.display      = '';
+  //     if (chargeEl)      chargeEl.textContent        = `+ ${currency}${HOTEL_CONFIG.deliveryCharge || 0} delivery charge added`;
+  //     if (badgeEl)       badgeEl.textContent         = `${currency}${HOTEL_CONFIG.deliveryCharge || 0}`;
+  //     if (totalChargeEl) totalChargeEl.textContent   = `+ ${currency}${HOTEL_CONFIG.deliveryCharge || 0}`;
+
+  //     const dtsDeliveryRow = document.querySelector('.dts-delivery');
+  //     if (dtsDeliveryRow) dtsDeliveryRow.style.display = '';
+  //   }
+  // }
 
   function confirmDineIn() {
     const ti  = document.getElementById('orderTable');
@@ -403,11 +615,59 @@ const App = (() => {
     setTimeout(() => el.classList.remove('error'), 2000);
   }
 
+  // function _afterOrder(result) {
+  //   closeOrderTypeModal();
+  //   const on = document.getElementById('orderNotes');
+  //   if (on) on.value = '';
+
+  //   const typeEl    = document.getElementById('successType');
+  //   const tableCard = document.getElementById('successTableCard');
+  //   const tableEl   = document.getElementById('successTable');
+  //   const nameCard  = document.getElementById('successNameCard');
+  //   const nameEl    = document.getElementById('successName');
+  //   const addrCard  = document.getElementById('successAddrCard');
+  //   const addrEl    = document.getElementById('successAddr');
+  //   const roundEl   = document.getElementById('successRound');
+
+  //   if (typeEl) typeEl.textContent = result.orderType === 'delivery' ? '🛵 Home Delivery' : '🍽️ Dine-In';
+
+  //   if (result.orderType === 'dine-in') {
+  //     if (tableCard) tableCard.style.display = 'flex';
+  //     if (tableEl)   tableEl.textContent = result.table || '—';
+  //     if (addrCard)  addrCard.style.display = 'none';
+  //   } else {
+  //     if (tableCard) tableCard.style.display = 'none';
+  //     if (addrCard)  addrCard.style.display = 'flex';
+  //     if (addrEl)    addrEl.textContent = result.address || '';
+  //   }
+
+  //   if (result.name) {
+  //     if (nameEl)   nameEl.textContent = result.name;
+  //     if (nameCard) nameCard.style.display = 'flex';
+  //   } else {
+  //     if (nameCard) nameCard.style.display = 'none';
+  //   }
+
+  //   if (roundEl) roundEl.style.display = result.orderRound > 1 ? 'block' : 'none';
+
+  //   closeCart();
+  //   setTimeout(() => _showScreen('success'), 320);
+  // }
+
   function _afterOrder(result) {
     closeOrderTypeModal();
     const on = document.getElementById('orderNotes');
     if (on) on.value = '';
 
+    // Save result to localStorage so refresh can restore it
+    localStorage.setItem('hotel_last_result', JSON.stringify(result));
+
+    _renderSuccess(result);
+    closeCart();
+    setTimeout(() => _showScreen('success'), 320);
+  }
+
+  function _renderSuccess(result) {
     const typeEl    = document.getElementById('successType');
     const tableCard = document.getElementById('successTableCard');
     const tableEl   = document.getElementById('successTable');
@@ -421,25 +681,22 @@ const App = (() => {
 
     if (result.orderType === 'dine-in') {
       if (tableCard) tableCard.style.display = 'flex';
-      if (tableEl)   tableEl.textContent = result.table || '—';
-      if (addrCard)  addrCard.style.display = 'none';
+      if (tableEl)   tableEl.textContent     = result.table || '—';
+      if (addrCard)  addrCard.style.display  = 'none';
     } else {
       if (tableCard) tableCard.style.display = 'none';
-      if (addrCard)  addrCard.style.display = 'flex';
-      if (addrEl)    addrEl.textContent = result.address || '';
+      if (addrCard)  addrCard.style.display  = 'flex';
+      if (addrEl)    addrEl.textContent      = result.address || '';
     }
 
     if (result.name) {
-      if (nameEl)   nameEl.textContent = result.name;
-      if (nameCard) nameCard.style.display = 'flex';
+      if (nameEl)   nameEl.textContent      = result.name;
+      if (nameCard) nameCard.style.display  = 'flex';
     } else {
-      if (nameCard) nameCard.style.display = 'none';
+      if (nameCard) nameCard.style.display  = 'none';
     }
 
     if (roundEl) roundEl.style.display = result.orderRound > 1 ? 'block' : 'none';
-
-    closeCart();
-    setTimeout(() => _showScreen('success'), 320);
   }
 
   function placeOrder() { openOrderTypeModal(); }
@@ -469,7 +726,8 @@ const App = (() => {
     // Aggregate all items across all rounds
     const allItems = {};
     let foodSubtotal = 0;
-    const deliveryCharge = 40;
+    // const deliveryCharge = 40;
+    const deliveryCharge = HOTEL_CONFIG.deliveryCharge || 0;
 
     orders.forEach(round => {
       round.items.forEach(({ item, qty }) => {
@@ -569,11 +827,41 @@ const App = (() => {
     const deliveryChargeEl = document.getElementById('billDeliveryCharge');
     const totalEl        = document.getElementById('billGrandTotal');
 
-    if (subTotalEl)      subTotalEl.textContent      = `${currency}${foodSubtotal}`;
-    if (deliveryRowEl)   deliveryRowEl.style.display  = isDelivery ? 'flex' : 'none';
-    if (deliveryChargeEl) deliveryChargeEl.textContent = `${currency}${deliveryCharge}`;
-    if (totalEl)         totalEl.textContent          = `${currency}${grandTotal}`;
+    // if (subTotalEl)      subTotalEl.textContent      = `${currency}${foodSubtotal}`;
+    // if (deliveryRowEl)   deliveryRowEl.style.display  = isDelivery ? 'flex' : 'none';
+    // if (deliveryChargeEl) deliveryChargeEl.textContent = `${currency}${deliveryCharge}`;
+    // if (totalEl)         totalEl.textContent          = `${currency}${grandTotal}`;
 
+    const cgstPct = HOTEL_CONFIG.gst?.enabled ? (HOTEL_CONFIG.gst.cgst / 100) : 0;
+    const sgstPct = HOTEL_CONFIG.gst?.enabled ? (HOTEL_CONFIG.gst.sgst / 100) : 0;
+    const cgst = Math.round(foodSubtotal * cgstPct);
+    const sgst = Math.round(foodSubtotal * sgstPct);
+
+    const grandWithTax = foodSubtotal + cgst + sgst + (isDelivery ? deliveryCharge : 0);
+
+    if (subTotalEl)       subTotalEl.textContent       = `${currency}${foodSubtotal}`;
+
+    // const cgstRowEl = document.getElementById('billCgstRow');
+    // const cgstEl    = document.getElementById('billCgst');
+    // const sgstRowEl = document.getElementById('billSgstRow');
+    // const sgstEl    = document.getElementById('billSgst');
+    // if (cgstEl)    cgstEl.textContent    = `${currency}${cgst}`;
+    // if (sgstEl)    sgstEl.textContent    = `${currency}${sgst}`;
+    const cgstRowEl   = document.getElementById('billCgstRow');
+    const cgstEl      = document.getElementById('billCgst');
+    const sgstRowEl   = document.getElementById('billSgstRow');
+    const sgstEl      = document.getElementById('billSgst');
+    const cgstLabelEl = document.getElementById('billCgstLabel');
+    const sgstLabelEl = document.getElementById('billSgstLabel');
+
+    if (cgstLabelEl) cgstLabelEl.textContent = `CGST (${HOTEL_CONFIG.gst?.cgst ?? 0}%)`;
+    if (sgstLabelEl) sgstLabelEl.textContent = `SGST (${HOTEL_CONFIG.gst?.sgst ?? 0}%)`;
+    if (cgstEl)      cgstEl.textContent      = `${currency}${cgst}`;
+    if (sgstEl)      sgstEl.textContent      = `${currency}${sgst}`;
+
+    if (deliveryRowEl)    deliveryRowEl.style.display   = isDelivery ? 'flex' : 'none';
+    if (deliveryChargeEl) deliveryChargeEl.textContent  = `${currency}${deliveryCharge}`;
+    if (totalEl)          totalEl.textContent           = `${currency}${grandWithTax}`;
     // Bill number (timestamp-based)
     const billNoEl = document.getElementById('billNumber');
     if (billNoEl) billNoEl.textContent = `#${Date.now().toString().slice(-6)}`;
@@ -590,7 +878,9 @@ const App = (() => {
 
     const allItems = {};
     let grandTotal = 0;
-    const deliveryCharge = 40;
+    // const deliveryCharge = 40;
+    const deliveryCharge = HOTEL_CONFIG.deliveryCharge || 0;
+
     orders.forEach(round => {
       round.items.forEach(({ item, qty }) => {
         if (allItems[item.id]) { allItems[item.id].qty += qty; }
@@ -599,9 +889,28 @@ const App = (() => {
       });
     });
 
+    // const firstOrder = orders[0] || {};
+    // const isDelivery = firstOrder.orderType === 'delivery';
+    // if (isDelivery) grandTotal += deliveryCharge;
+
+    // const cgstPct = HOTEL_CONFIG.gst?.enabled ? (HOTEL_CONFIG.gst.cgst / 100) : 0;
+    // const sgstPct = HOTEL_CONFIG.gst?.enabled ? (HOTEL_CONFIG.gst.sgst / 100) : 0;
+    // const cgst = Math.round(grandTotal * cgstPct);
+    // const sgst = Math.round(grandTotal * sgstPct);
+    // grandTotal = grandTotal + cgst + sgst;   // ← ADD THIS
+
     const firstOrder = orders[0] || {};
     const isDelivery = firstOrder.orderType === 'delivery';
+
+    const foodOnly = grandTotal; // ← save food subtotal BEFORE adding delivery
     if (isDelivery) grandTotal += deliveryCharge;
+
+    const cgstPct = HOTEL_CONFIG.gst?.enabled ? (HOTEL_CONFIG.gst.cgst / 100) : 0;
+    const sgstPct = HOTEL_CONFIG.gst?.enabled ? (HOTEL_CONFIG.gst.sgst / 100) : 0;
+    const cgst = Math.round(foodOnly * cgstPct); // ← tax on food only
+    const sgst = Math.round(foodOnly * sgstPct); // ← tax on food only
+    grandTotal = grandTotal + cgst + sgst;
+
     return {
       hotelName:  HOTEL_CONFIG.hotelName,
       address:    HOTEL_CONFIG.address || '',
@@ -614,6 +923,7 @@ const App = (() => {
       orderType:  firstOrder.orderType || 'dine-in',
       deliveryAddress: firstOrder.address || '',
       deliveryCharge: isDelivery ? deliveryCharge : 0,
+      foodSubtotal: foodOnly,  
       rounds:     orders,
       items:      Object.values(allItems),
       grandTotal,
@@ -651,8 +961,22 @@ const App = (() => {
       d.rounds.forEach(r => { msg += `Order ${r.round} (${r.time}): ${c}${r.total}\n`; });
       msg += `━━━━━━━━━━━━━━━━━━━━\n`;
     }
+    // if (d.deliveryCharge) msg += `🛵 Delivery Charge: ${c}${d.deliveryCharge}\n`;
+    // msg += `💰 *TOTAL AMOUNT: ${c}${d.grandTotal}*\n`;
+    // const _foodSub = d.grandTotal - (d.deliveryCharge || 0) - 
+    // Math.round((d.grandTotal - (d.deliveryCharge || 0)) * (HOTEL_CONFIG.gst?.cgst || 0) / 100) - 
+    // Math.round((d.grandTotal - (d.deliveryCharge || 0)) * (HOTEL_CONFIG.gst?.sgst || 0) / 100);
+
+    const cgstPct = HOTEL_CONFIG.gst?.enabled ? (HOTEL_CONFIG.gst.cgst / 100) : 0;
+    const sgstPct = HOTEL_CONFIG.gst?.enabled ? (HOTEL_CONFIG.gst.sgst / 100) : 0;
+    const cgst = Math.round(d.foodSubtotal * cgstPct);
+    const sgst = Math.round(d.foodSubtotal * sgstPct);
+
+    if (cgst > 0) msg += `CGST (${HOTEL_CONFIG.gst.cgst}%): ${c}${cgst}\n`;
+    if (sgst > 0) msg += `SGST (${HOTEL_CONFIG.gst.sgst}%): ${c}${sgst}\n`;
     if (d.deliveryCharge) msg += `🛵 Delivery Charge: ${c}${d.deliveryCharge}\n`;
     msg += `💰 *TOTAL AMOUNT: ${c}${d.grandTotal}*\n`;
+
     msg += `━━━━━━━━━━━━━━━━━━━━\n`;
     msg += d.orderType === 'delivery'
       ? `💳 _Pay via UPI / QR or pay cash to delivery boy_\n`
@@ -660,279 +984,472 @@ const App = (() => {
     msg += `_Sent via QR Menu_`;
     window.open(`https://wa.me/${HOTEL_CONFIG.whatsapp}?text=${encodeURIComponent(msg)}`, '_blank');
   }
+  //newly added
+  // function _generatePDF(d, download) {
+  //   const { jsPDF } = window.jspdf;
+  //   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [80, 220] });
+  //   const W = doc.internal.pageSize.getWidth();
+  //   const H = doc.internal.pageSize.getHeight();
+  //   const c = 'Rs.';
+  //   const MARGIN = 5;
+  //   const L = MARGIN;
+  //   const R = W - MARGIN;
+  //   const CW = R - L;
+  //   let y = 6;
+
+  //   /* ── helpers ─────────────────────────────────────────── */
+  //   const dashed = (yy) => {
+  //     doc.setDrawColor(160, 160, 160);
+  //     doc.setLineWidth(0.2);
+  //     doc.setLineDash([1, 1], 0);
+  //     doc.line(L, yy, R, yy);
+  //     doc.setLineDash([], 0);
+  //   };
+  //   const solid = (yy) => {
+  //     doc.setDrawColor(180, 180, 180);
+  //     doc.setLineWidth(0.25);
+  //     doc.line(L, yy, R, yy);
+  //   };
+  //   const center = (txt, yy, size = 9, style = 'normal') => {
+  //     doc.setFont('helvetica', style);
+  //     doc.setFontSize(size);
+  //     doc.setTextColor(20, 20, 20);
+  //     doc.text(txt, W / 2, yy, { align: 'center' });
+  //   };
+  //   const left = (txt, yy, size = 8, style = 'normal', color = [20,20,20]) => {
+  //     doc.setFont('helvetica', style);
+  //     doc.setFontSize(size);
+  //     doc.setTextColor(...color);
+  //     doc.text(txt, L, yy);
+  //   };
+  //   const right = (txt, yy, size = 8, style = 'normal') => {
+  //     doc.setFont('helvetica', style);
+  //     doc.setFontSize(size);
+  //     doc.setTextColor(20, 20, 20);
+  //     doc.text(txt, R, yy, { align: 'right' });
+  //   };
+
+  //   /* ── White background ────────────────────────────────── */
+  //   doc.setFillColor(255, 255, 255);
+  //   doc.rect(0, 0, W, H, 'F');
+
+  //   /* ── Restaurant icon (drawn, no image needed) ────────── */
+  //   // Plate circle
+  //   doc.setDrawColor(30, 30, 30);
+  //   doc.setLineWidth(0.6);
+  //   doc.circle(W / 2, y + 5, 5);
+  //   doc.setFillColor(30, 30, 30);
+  //   doc.circle(W / 2, y + 5, 5, 'S');
+  //   // Dome shape (filled arc simulation with ellipse)
+  //   doc.setFillColor(255, 255, 255);
+  //   doc.ellipse(W / 2, y + 4.5, 3.5, 2.5, 'F');
+  //   // Fork left
+  //   doc.setDrawColor(30, 30, 30);
+  //   doc.setLineWidth(0.5);
+  //   doc.line(W / 2 - 7, y, W / 2 - 7, y + 10);
+  //   doc.line(W / 2 - 8.5, y, W / 2 - 8.5, y + 4);
+  //   doc.line(W / 2 - 7, y + 4, W / 2 - 8.5, y + 4);
+  //   // Knife right
+  //   doc.line(W / 2 + 7, y, W / 2 + 7, y + 10);
+  //   doc.line(W / 2 + 8.5, y, W / 2 + 8.5, y + 3);
+  //   doc.line(W / 2 + 7, y + 3, W / 2 + 8.5, y + 3);
+
+  //   y += 14;
+
+  //   // "Restaurant" italic text under icon
+  //   doc.setFont('helvetica', 'bolditalic');
+  //   doc.setFontSize(9);
+  //   doc.setTextColor(30, 30, 30);
+  //   doc.text('Restaurant', W / 2, y, { align: 'center' });
+  //   y += 7;
+
+  //   /* ── Hotel name + address + phone ────────────────────── */
+  //   center(d.hotelName.toUpperCase(), y, 12, 'bold');
+  //   y += 6;
+  //   if (d.address) { center(d.address, y, 8); y += 5; }
+  //   if (d.phone)   { center(d.phone,   y, 8); y += 5; }
+  //   y += 3;
+
+  //   solid(y); y += 5;
+
+  //   /* ── Receipt meta ────────────────────────────────────── */
+  //   left(`Receipt No.: ${d.billNo}`, y, 8);           y += 5;
+  //   if (d.orderType !== 'delivery' && d.guestTable) {
+  //     left(`Table No.: ${d.guestTable}`, y, 8);       y += 5;
+  //   }
+  //   left(`Date: ${d.billDate}   ${d.billTime}`, y, 8); y += 5;
+  //   if (d.guestName) {
+  //     left(`Customer Name: ${d.guestName}`, y, 8);    y += 5;
+  //   }
+  //   if (d.guestMobile) {
+  //     left(`Mobile: ${d.guestMobile}`, y, 8);         y += 5;
+  //   }
+  //   if (d.orderType === 'delivery' && d.deliveryAddress) {
+  //     const addrLines = doc.splitTextToSize(`Deliver To: ${d.deliveryAddress}`, CW);
+  //     addrLines.forEach(line => { left(line, y, 8); y += 5; });
+  //   }
+  //   y += 2;
+
+  //   /* ── Column headers ──────────────────────────────────── */
+  //   const COL_ITEM  = L;
+  //   const COL_PRICE = W - 32;
+  //   const COL_AMT   = R;
+
+  //   doc.setFont('helvetica', 'bold');
+  //   doc.setFontSize(8.5);
+  //   doc.setTextColor(20, 20, 20);
+  //   doc.text('QTY/ Item Name', COL_ITEM,  y);
+  //   doc.text('Price',          COL_PRICE, y, { align: 'right' });
+  //   doc.text('Amount',         COL_AMT,   y, { align: 'right' });
+  //   y += 3;
+  //   dashed(y); y += 4;
+
+  //   /* ── Items ───────────────────────────────────────────── */
+  //   d.items.forEach(({ item, qty }) => {
+  //     const label = `${qty}  ${item.name}`;
+  //     const nameLines = doc.splitTextToSize(label, COL_PRICE - L - 4);
+  //     const rowH = nameLines.length * 5;
+
+  //     doc.setFont('helvetica', 'normal');
+  //     doc.setFontSize(8);
+  //     doc.setTextColor(20, 20, 20);
+  //     doc.text(nameLines, COL_ITEM, y + 4);
+  //     doc.text(`${item.price}.00`, COL_PRICE, y + 4, { align: 'right' });
+
+  //     doc.setFont('helvetica', 'normal');
+  //     doc.text(`${item.price * qty}.00`, COL_AMT, y + 4, { align: 'right' });
+
+  //     y += Math.max(8, rowH + 2);
+  //     dashed(y); y += 4;
+  //   });
+
+  //   /* ── Totals ──────────────────────────────────────────── */
+  //   const foodSubtotal   = d.grandTotal - (d.deliveryCharge || 0);
+  //   const cgst           = Math.round(foodSubtotal * 0.00);
+  //   const sgst           = Math.round(foodSubtotal * 0.00);
+  //   const taxedTotal     = foodSubtotal + cgst + sgst + (d.deliveryCharge || 0);
+  
+  //   left('Sub Total:',  y, 8); right(`${foodSubtotal}.00`,  y, 8); y += 5;
+  //   left('CGST: 0%',    y, 8); right(`${cgst}.00`,          y, 8); y += 5;
+  //   left('SGST: 0%',    y, 8); right(`${sgst}.00`,          y, 8); y += 5;
+
+  //   if (d.deliveryCharge) {
+  //     left('Delivery:',  y, 8); right(`${d.deliveryCharge}.00`, y, 8); y += 5;
+  //   }
+
+  //   doc.setFont('helvetica', 'bold');
+  //   doc.setFontSize(9);
+  //   doc.setTextColor(20, 20, 20);
+  //   doc.text('Total:', L, y);
+  //   doc.text(`${taxedTotal}.00`, R, y, { align: 'right' });
+  //   y += 7;
+
+  //   solid(y); y += 5;
+
+  //   /* ── Payment mode ────────────────────────────────────── */
+  //   const payMode = d.orderType === 'delivery' ? 'UPI / Cash' : 'Cash / Card';
+  //   left(`Payment Mode: ${payMode}`, y, 8); y += 8;
+
+  //   solid(y); y += 7;
+
+  //   /* ── Footer ──────────────────────────────────────────── */
+  //   center('PLEASE VISIT US AGAIN', y, 9, 'bold'); y += 6;
+  //   center('THANK YOU!!',           y, 9, 'bold'); y += 8;
+
+  //   /* ── Barcode (simulated with vertical lines) ─────────── */
+  //   const bcX    = L + CW * 0.05;
+  //   const bcW    = CW * 0.9;
+  //   const bcH    = 12;
+  //   const bars   = 60;
+  //   const barW   = bcW / bars;
+  //   const seed   = d.billNo.split('').reduce((a, ch) => a + ch.charCodeAt(0), 0);
+
+  //   for (let i = 0; i < bars; i++) {
+  //     const thick = ((seed * (i + 3)) % 5 < 2);
+  //     doc.setFillColor(20, 20, 20);
+  //     doc.rect(bcX + i * barW, y, thick ? barW * 1.5 : barW * 0.7, bcH, 'F');
+  //   }
+  //   y += bcH + 4;
+
+  //   // Barcode number under bars
+  //   center(d.billNo.replace('#', '').padStart(12, '0'), y, 6);
+
+  //   /* ── Save ────────────────────────────────────────────── */
+  //   const fileName = `Receipt-${d.hotelName.replace(/\s+/g, '-')}-${d.billNo}.pdf`;
+  //   doc.save(fileName);
+  //   showToast('Receipt downloaded!', '✨');
+  // }
 
   function _generatePDF(d, download) {
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a5' });
-    const W = doc.internal.pageSize.getWidth();   // 148mm for A5
-    const H = doc.internal.pageSize.getHeight();  // 210mm for A5
-    const c = d.currency;
-    const MARGIN = 10;
-    const CONTENT_W = W - MARGIN * 2;
+    const estimatedH = 150 + (d.items.length * 14) + (d.rounds && d.rounds.length > 1 ? d.rounds.length * 7 : 0) + (d.deliveryAddress ? 12 : 0);
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [80, estimatedH] });
+    const W = doc.internal.pageSize.getWidth();
+    const H = doc.internal.pageSize.getHeight();
+    const c = 'Rs.';
+    const M = 4;
+    const L = M;
+    const R = W - M;
+    const CW = R - L;
     let y = 0;
 
-    // ── Background ──────────────────────────────────────────────
-    doc.setFillColor(250, 248, 244);
-    doc.rect(0, 0, W, H, 'F');
-
-    // ── Header band ─────────────────────────────────────────────
-    doc.setFillColor(22, 22, 20);
-    doc.rect(0, 0, W, 38, 'F');
-
-    // Gold accent bar at very top
-    doc.setFillColor(212, 175, 55);
-    doc.rect(0, 0, W, 3, 'F');
-
-    // Hotel name
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(17);
-    doc.setTextColor(212, 175, 55);
-    doc.text(d.hotelName.toUpperCase(), W / 2, 16, { align: 'center' });
-
-    // Subtitle
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.5);
-    doc.setTextColor(200, 195, 185);
-    doc.text('OFFICIAL ORDER BILL', W / 2, 23, { align: 'center' });
-
-    // Address & phone
-    if (d.address || d.phone) {
-      const contact = [d.address, d.phone].filter(Boolean).join('  ·  ');
-      doc.setFontSize(6.5);
-      doc.setTextColor(160, 155, 145);
-      doc.text(contact, W / 2, 30, { align: 'center' });
-    }
-
-    // Gold bottom rule on header
-    doc.setFillColor(212, 175, 55);
-    doc.rect(0, 35, W, 0.6, 'F');
-
-    y = 45;
-
-    // ── Bill Info Box ───────────────────────────────────────────
-    doc.setFillColor(255, 255, 255);
-    doc.setDrawColor(220, 215, 205);
-    doc.setLineWidth(0.3);
-    doc.roundedRect(MARGIN, y, CONTENT_W, 28, 2.5, 2.5, 'FD');
-
-    const colMid = W / 2;
-    const leftX  = MARGIN + 5;
-    const rightX = colMid + 5;
-
-    // Left column
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7);
-    doc.setTextColor(130, 125, 115);
-    doc.text('BILL NO.',  leftX, y + 7);
-    doc.text('DATE',      leftX, y + 14);
-    doc.text('TIME',      leftX, y + 21);
-
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(7.5);
-    doc.setTextColor(25, 25, 22);
-    doc.text(d.billNo,     leftX + 22, y + 7);
-    doc.text(d.billDate,   leftX + 22, y + 14);
-    doc.text(d.billTime,   leftX + 22, y + 21);
-
-    // Vertical divider
-    doc.setDrawColor(220, 215, 205);
-    doc.setLineWidth(0.3);
-    doc.line(colMid, y + 4, colMid, y + 24);
-
-    // Right column
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7);
-    doc.setTextColor(130, 125, 115);
-    doc.text('ORDER TYPE', rightX, y + 7);
-    doc.text('STATUS',     rightX, y + 14);
-    doc.text('ROUNDS',     rightX, y + 21);
-
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(7.5);
-    doc.setTextColor(25, 25, 22);
-    const orderTypeLabel = d.orderType === 'delivery' ? 'Home Delivery' : 'Dine-In';
-    doc.text(orderTypeLabel, rightX + 25, y + 7);
-    doc.text('Pending Payment', rightX + 25, y + 14);
-    doc.text(String(d.rounds.length), rightX + 25, y + 21);
-
-    y += 34;
-
-    // ── Guest / Delivery Info ───────────────────────────────────
-    const guestRows = [];
-    if (d.guestName)    guestRows.push(['Customer',  d.guestName]);
-    if (d.guestMobile)  guestRows.push(['Mobile',    d.guestMobile]);
-    if (d.guestTable && d.orderType !== 'delivery') guestRows.push(['Table No.',  d.guestTable]);
-    if (d.deliveryAddress) guestRows.push(['Deliver To', d.deliveryAddress]);
-
-    if (guestRows.length > 0) {
-      const ROW_H = 8;
-      // Calculate box height dynamically for multi-line address
-      let totalBoxH = 8;
-      const rowHeights = guestRows.map(row => {
-        const split = doc.splitTextToSize(row[1], CONTENT_W - 46);
-        return Math.max(ROW_H, split.length * 4.5 + 3);
-      });
-      totalBoxH += rowHeights.reduce((a, b) => a + b, 0);
-
-      doc.setFillColor(248, 246, 241);
-      doc.setDrawColor(220, 215, 205);
+    // helpers
+    const fill = (x, yy, w, h, r, g, b) => {
+      doc.setFillColor(r, g, b); doc.rect(x, yy, w, h, 'F');
+    };
+    const txtC = (str, yy, sz, style, cr, cg, cb) => {
+      doc.setFont('helvetica', style || 'normal');
+      doc.setFontSize(sz || 8);
+      doc.setTextColor(cr ?? 20, cg ?? 18, cb ?? 12);
+      doc.text(String(str), W / 2, yy, { align: 'center' });
+    };
+    const txtL = (str, x, yy, sz, style, cr, cg, cb) => {
+      doc.setFont('helvetica', style || 'normal');
+      doc.setFontSize(sz || 8);
+      doc.setTextColor(cr ?? 20, cg ?? 18, cb ?? 12);
+      doc.text(String(str), x, yy);
+    };
+    const txtR = (str, x, yy, sz, style, cr, cg, cb) => {
+      doc.setFont('helvetica', style || 'normal');
+      doc.setFontSize(sz || 8);
+      doc.setTextColor(cr ?? 20, cg ?? 18, cb ?? 12);
+      doc.text(String(str), x, yy, { align: 'right' });
+    };
+    const dashed = (yy) => {
+      doc.setDrawColor(180, 170, 148);
+      doc.setLineWidth(0.2);
+      doc.setLineDash([0.8, 0.8], 0);
+      doc.line(L, yy, R, yy);
+      doc.setLineDash([], 0);
+    };
+    const solid = (yy) => {
+      doc.setDrawColor(60, 55, 40);
       doc.setLineWidth(0.3);
-      doc.roundedRect(MARGIN, y, CONTENT_W, totalBoxH, 2.5, 2.5, 'FD');
+      doc.line(L, yy, R, yy);
+    };
+    const metaRow = (lbl, val, yy) => {
+      txtL(lbl, L, yy, 7.5, 'normal', 138, 126, 98);
+      txtR(val, R, yy, 7.5, 'bold', 22, 20, 14);
+    };
 
-      let ry = y + 6;
-      guestRows.forEach((row, idx) => {
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(7);
-        doc.setTextColor(100, 95, 85);
-        doc.text(row[0].toUpperCase(), leftX, ry);
+    // white background
+    fill(0, 0, W, H, 255, 255, 255);
 
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(25, 25, 22);
-        doc.setFontSize(7.5);
-        const split = doc.splitTextToSize(row[1], CONTENT_W - 46);
-        doc.text(split, leftX + 30, ry);
-        ry += rowHeights[idx];
-      });
+    // ── HEADER dark band ──────────────────────────────
+    const HDR_H = 36;
+    fill(0, 0, W, HDR_H, 22, 20, 14);
 
-      y += totalBoxH + 6;
+    // three gold decorative lines
+    doc.setDrawColor(212, 175, 55);
+    doc.setLineWidth(0.25); doc.line(W * 0.25, 5,   W * 0.75, 5);
+    doc.setLineWidth(0.7);  doc.line(W * 0.25, 6.2, W * 0.75, 6.2);
+    doc.setLineWidth(0.25); doc.line(W * 0.25, 7.4, W * 0.75, 7.4);
+
+    // fork | plate | knife icon (centred)
+    const ix = W / 2, ib = 14;
+    doc.setDrawColor(212, 175, 55); doc.setLineWidth(0.5);
+    // plate
+    doc.circle(ix, ib, 3.5); fill(ix - 2, ib - 2, 4, 4, 22, 20, 14);
+    // fork left
+    doc.line(ix - 7, ib - 4, ix - 7, ib + 4);
+    doc.line(ix - 8.2, ib - 4, ix - 8.2, ib);
+    doc.line(ix - 7, ib, ix - 8.2, ib);
+    // knife right
+    doc.line(ix + 7, ib - 4, ix + 7, ib + 4);
+    doc.line(ix + 8.2, ib - 4, ix + 8.2, ib - 1);
+    doc.line(ix + 7, ib - 1, ix + 8.2, ib - 1);
+
+    y = ib + 7;
+
+    // hotel name
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.setTextColor(212, 175, 55);
+    doc.text(d.hotelName.toUpperCase(), W / 2, y, { align: 'center', charSpace: 1.5 });
+    y += 5;
+
+    // subtitle
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6);
+    doc.setTextColor(160, 148, 110);
+    doc.text('OFFICIAL ORDER BILL', W / 2, y, { align: 'center', charSpace: 1.2 });
+    y += 3.5;
+
+    // address / phone
+    if (d.address || d.phone) {
+      const contact = [d.address, d.phone].filter(Boolean).join('  |  ');
+      doc.setFontSize(5.5);
+      doc.setTextColor(110, 100, 76);
+      doc.text(contact, W / 2, y, { align: 'center' });
     }
 
-    // ── Items Table ─────────────────────────────────────────────
-    // Header
-    doc.setFillColor(22, 22, 20);
-    doc.roundedRect(MARGIN, y, CONTENT_W, 9, 2, 2, 'F');
+    // gold closing rule
+    fill(0, HDR_H - 0.7, W, 0.7, 212, 175, 55);
 
+    y = HDR_H + 5;
+
+    // ── META ─────────────────────────────────────────
+    metaRow('Receipt No.', d.billNo,   y); y += 5.5;
+    metaRow('Date',        d.billDate, y); y += 5.5;
+    metaRow('Time',        d.billTime, y); y += 5.5;
+    metaRow('Order Type',  d.orderType === 'delivery' ? 'Home Delivery' : 'Dine-In', y); y += 5.5;
+    metaRow('Rounds',      String(d.rounds ? d.rounds.length : 1), y); y += 4;
+
+    dashed(y); y += 5;
+
+    // ── CUSTOMER ─────────────────────────────────────
+    if (d.guestName || d.guestMobile || d.guestTable || d.deliveryAddress) {
+      if (d.guestName)   { metaRow('Customer', d.guestName,   y); y += 5.5; }
+      if (d.guestMobile) { metaRow('Mobile',   d.guestMobile, y); y += 5.5; }
+      if (d.guestTable && d.orderType !== 'delivery') {
+        metaRow('Table No.', d.guestTable, y); y += 5.5;
+      }
+      if (d.deliveryAddress) {
+        txtL('Deliver To', L, y, 7.5, 'normal', 138, 126, 98);
+        const al = doc.splitTextToSize(d.deliveryAddress, CW * 0.55);
+        txtR(al[0], R, y, 7.5, 'bold', 22, 20, 14); y += 5;
+        al.slice(1).forEach(ln => { txtR(ln, R, y, 7, 'normal', 22, 20, 14); y += 5; });
+      }
+      dashed(y); y += 5;
+    }
+
+    // ── ITEMS TABLE ───────────────────────────────────
+    // column X positions — all right-aligned anchors
+    const C_NAME = L + 5;   // item name left edge
+    const C_QTY  = R - 26;  // qty  right anchor
+    const C_RATE = R - 13;  // rate right anchor
+    const C_AMT  = R;       // amt  right anchor
+    const NAME_W = C_QTY - C_NAME - 2;
+
+    // header row
+    fill(0, y, W, 8, 22, 20, 14);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(7.5);
+    doc.setFontSize(7);
     doc.setTextColor(212, 175, 55);
-    doc.text('ITEM',           leftX,        y + 6);
-    doc.text('QTY',            W - MARGIN - 28, y + 6, { align: 'right' });
-    doc.text('RATE',           W - MARGIN - 14, y + 6, { align: 'right' });
-    doc.text('AMOUNT',         W - MARGIN - 1,  y + 6, { align: 'right' });
-    y += 11;
+    doc.text('ITEM',   C_NAME, y + 5.5);
+    doc.text('QTY',    C_QTY,  y + 5.5, { align: 'right' });
+    doc.text('RATE',   C_RATE, y + 5.5, { align: 'right' });
+    doc.text('AMT',    C_AMT,  y + 5.5, { align: 'right' });
+    y += 9;
 
-    // Items
+    // item rows
     d.items.forEach(({ item, qty }, idx) => {
-      const rowBg = idx % 2 === 0 ? [255,255,255] : [249,247,243];
-      doc.setFillColor(...rowBg);
-      const itemLines = doc.splitTextToSize(item.name, CONTENT_W - 50);
-      const rowH = Math.max(9, itemLines.length * 4.5 + 4);
-      doc.rect(MARGIN, y, CONTENT_W, rowH, 'F');
+      const lines = doc.splitTextToSize(item.name, NAME_W);
+      const rowH  = Math.max(10, lines.length * 5 + 3);
 
-      // Veg/non-veg dot
-      doc.setFillColor(item.type === 'veg' ? 34 : 220, item.type === 'veg' ? 139 : 38, item.type === 'veg' ? 34 : 38);
-      doc.circle(leftX - 0.5, y + rowH / 2, 1.2, 'F');
+      // alternating bg
+      if (idx % 2 !== 0) fill(0, y, W, rowH, 250, 248, 242);
 
-      // Item name
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7.5);
-      doc.setTextColor(25, 25, 22);
-      doc.text(itemLines, leftX + 3, y + 5.5);
+      // veg / non-veg square
+      const isVeg = item.type === 'veg';
+      doc.setDrawColor(isVeg ? 30 : 200, isVeg ? 155 : 40, isVeg ? 30 : 40);
+      doc.setLineWidth(0.8);
+      doc.rect(L + 0.5, y + rowH / 2 - 1.5, 2.8, 2.8);
 
-      // Qty, rate, amount — vertically centered
       const midY = y + rowH / 2 + 1.5;
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(60, 55, 50);
-      doc.text(String(qty),              W - MARGIN - 28, midY, { align: 'right' });
-      doc.text(`${c}${item.price}`,       W - MARGIN - 14, midY, { align: 'right' });
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(25, 25, 22);
-      doc.text(`${c}${item.price * qty}`, W - MARGIN - 1,  midY, { align: 'right' });
+
+      // item name
+      txtL(lines, C_NAME, y + 5.5, 7.5, 'normal', 22, 20, 14);
+
+      // qty
+      txtR(String(qty),          C_QTY,  midY, 7.5, 'normal', 100, 92, 76);
+      // rate
+      txtR(`${c}${item.price}`,  C_RATE, midY, 7.5, 'normal', 100, 92, 76);
+      // amount
+      txtR(`${c}${item.price * qty}`, C_AMT, midY, 7.5, 'bold', 22, 20, 14);
 
       y += rowH;
     });
 
-    // ── Totals block ─────────────────────────────────────────────
-    y += 4;
-    doc.setDrawColor(200, 195, 185);
-    doc.setLineWidth(0.4);
-    doc.line(MARGIN, y, W - MARGIN, y);
-    y += 5;
+    // table bottom rule
+    fill(0, y, W, 0.5, 22, 20, 14);
+    y += 6;
 
-    // Food subtotal
-    const foodSubtotal = d.grandTotal - (d.deliveryCharge || 0);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(80, 75, 65);
-    doc.text('Food Subtotal', leftX, y);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(25, 25, 22);
-    doc.text(`${c}${foodSubtotal}`, W - MARGIN - 1, y, { align: 'right' });
-    y += 7;
+    // ── TOTALS ───────────────────────────────────────
+    // const foodSub    = d.grandTotal - (d.deliveryCharge || 0);
+    const foodSub = d.foodSubtotal;
 
-    // Delivery charge (if applicable)
+    const cgstPct = HOTEL_CONFIG.gst?.enabled ? (HOTEL_CONFIG.gst.cgst / 100) : 0;
+    const sgstPct = HOTEL_CONFIG.gst?.enabled ? (HOTEL_CONFIG.gst.sgst / 100) : 0;
+    const cgst    = Math.round(foodSub * cgstPct);
+    const sgst    = Math.round(foodSub * sgstPct);
+
+    const grandFinal = foodSub + cgst + sgst + (d.deliveryCharge || 0);
+
+    const totRow = (lbl, val, bold) => {
+      txtL(lbl, L,  y, 7.5, bold ? 'bold' : 'normal', bold ? 22 : 110, bold ? 20 : 100, bold ? 14 : 78);
+      txtR(val, R,  y, 7.5, bold ? 'bold' : 'normal', bold ? 22 : 110, bold ? 20 : 100, bold ? 14 : 78);
+      y += 5.5;
+    };
+
+    totRow('Sub Total:',  `${c}${foodSub}`);
+    // totRow('CGST (5%):', `${c}${cgst}`);
+    // totRow('SGST (5%):', `${c}${sgst}`);
+    totRow(`CGST (${HOTEL_CONFIG.gst?.cgst ?? 0}%):`, `${c}${cgst}`);
+    totRow(`SGST (${HOTEL_CONFIG.gst?.sgst ?? 0}%):`, `${c}${sgst}`);
     if (d.deliveryCharge) {
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
-      doc.setTextColor(80, 75, 65);
-      doc.text('Home Delivery Charge', leftX, y);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(200, 120, 30);
-      doc.text(`+ ${c}${d.deliveryCharge}`, W - MARGIN - 1, y, { align: 'right' });
-      y += 5;
-
-      // Thin divider before grand total
-      doc.setDrawColor(200, 195, 185);
-      doc.setLineWidth(0.3);
-      doc.line(MARGIN + CONTENT_W * 0.4, y, W - MARGIN, y);
-      y += 5;
+      txtL('Delivery:', L, y, 7.5, 'normal', 180, 100, 20);
+      txtR(`${c}${d.deliveryCharge}`, R, y, 7.5, 'bold', 180, 100, 20);
+      y += 5.5;
     }
 
-    // Grand total band
-    doc.setFillColor(22, 22, 20);
-    doc.roundedRect(MARGIN, y - 3, CONTENT_W, 13, 2.5, 2.5, 'F');
-    doc.setFillColor(212, 175, 55);
-    doc.roundedRect(MARGIN, y - 3, CONTENT_W, 13, 2.5, 2.5, 'S'); // outline
+    y += 1; solid(y); y += 2;
 
+    // grand total band
+    fill(0, y, W, 12, 22, 20, 14);
+    fill(0, y, 3,  12, 212, 175, 55);  // gold left accent
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
+    doc.setFontSize(9);
     doc.setTextColor(212, 175, 55);
-    doc.text('GRAND TOTAL', leftX, y + 5.5);
-    doc.setFontSize(11);
-    doc.text(`${c}${d.grandTotal}`, W - MARGIN - 1, y + 5.5, { align: 'right' });
+    doc.text('GRAND TOTAL', L + 5, y + 8);
+    doc.setFontSize(10);
+    doc.text(`${c}${grandFinal}`, R, y + 8, { align: 'right' });
+    y += 16;
 
+    // ── PAYMENT MODE ─────────────────────────────────
+    const payMode = d.orderType === 'delivery' ? 'UPI / Cash on Delivery' : 'UPI / Cash';
+    txtL(`Payment Mode: ${payMode}`, L, y, 7.5, 'normal', 90, 82, 62); y += 8;
+
+    // payment notice box (gold dashed border)
+    doc.setFillColor(255, 251, 232);
+    doc.setDrawColor(212, 175, 55);
+    doc.setLineWidth(0.3);
+    doc.setLineDash([1, 1], 0);
+    doc.rect(L, y, CW, 14, 'FD');
+    doc.setLineDash([], 0);
+
+    const pl1 = d.orderType === 'delivery' ? 'Pay via UPI or cash to delivery boy' : 'Complete payment at billing counter';
+    const pl2 = d.orderType === 'delivery' ? 'Amount includes delivery charge'     : 'Show this receipt at cashier desk';
+    txtC(pl1, y + 6,  7.5, 'bold',   22, 20, 14);
+    txtC(pl2, y + 11, 6.5, 'normal', 130, 118, 88);
     y += 18;
 
-    // ── Payment notice ───────────────────────────────────────────
-    if (y + 20 > H - 12) {
-      doc.addPage();
-      y = 14;
+    // ── BARCODE ───────────────────────────────────────
+    const bcX  = L + CW * 0.05;
+    const bcW  = CW * 0.9;
+    const bcH  = 12;
+    const bars = 55;
+    const bw   = bcW / bars;
+    const seed = d.billNo.split('').reduce((a, ch) => a + ch.charCodeAt(0), 71);
+
+    for (let i = 0; i < bars; i++) {
+      const thick = ((seed * (i + 7) * 13) % 7) < 3;
+      fill(bcX + i * bw, y, thick ? bw * 1.4 : bw * 0.65, bcH, 22, 20, 14);
     }
-    doc.setFillColor(255, 255, 255);
-    doc.setDrawColor(220, 215, 205);
-    doc.setLineWidth(0.3);
-    doc.roundedRect(MARGIN, y, CONTENT_W, 16, 2.5, 2.5, 'FD');
+    y += bcH + 3;
+    txtC(d.billNo.replace('#', '').padStart(12, '0'), y, 6.5, 'normal', 130, 118, 88);
+    y += 7;
 
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(7.5);
-    doc.setTextColor(22, 22, 20);
-    if (d.orderType === 'delivery') {
-      doc.text('💳  Pay via UPI / QR Code or Cash to Delivery Boy', W / 2, y + 7, { align: 'center' });
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(6.5);
-      doc.setTextColor(100, 95, 85);
-      doc.text('Amount includes home delivery charge', W / 2, y + 13, { align: 'center' });
-    } else {
-      doc.text('Please complete payment at the billing counter', W / 2, y + 7, { align: 'center' });
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(6.5);
-      doc.setTextColor(100, 95, 85);
-      doc.text('Show this bill at the cashier desk', W / 2, y + 13, { align: 'center' });
-    }
+    // ── FOOTER dark band ─────────────────────────────
+    fill(0, y, W, 18, 22, 20, 14);
+    fill(0, y, W, 0.7, 212, 175, 55);
+    txtC('PLEASE VISIT US AGAIN', y + 7,  8.5, 'bold', 212, 175, 55);
+    txtC('THANK YOU!!',           y + 14, 8.5, 'bold', 212, 175, 55);
 
-    y += 22;
-
-    // ── Footer ───────────────────────────────────────────────────
-    doc.setFillColor(212, 175, 55);
-    doc.rect(0, H - 10, W, 0.6, 'F');
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(7);
-    doc.setTextColor(130, 125, 115);
-    doc.text(`Thank you for dining at ${d.hotelName}  ❤️`, W / 2, H - 5, { align: 'center' });
-
-    const fileName = `Bill-${d.hotelName.replace(/\s+/g, '-')}-${d.billNo}.pdf`;
+    // ── SAVE ─────────────────────────────────────────
+    const fileName = `Receipt-${d.hotelName.replace(/\s+/g, '-')}-${d.billNo}.pdf`;
     doc.save(fileName);
-    showToast('Professional bill PDF downloaded!', '✨');
+    showToast('Receipt downloaded!', '✨');
   }
 
   function closeBillAndReset() {
@@ -940,6 +1457,7 @@ const App = (() => {
     Cart.startFreshOrder();
     localStorage.removeItem('hotel_guest');
     localStorage.removeItem('currentPage');
+    localStorage.removeItem('hotel_last_result');  
     _guest = { name: '', mobile: '', table: '' };
     ['fieldName','fieldMobile'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
     _showScreen('welcome');
@@ -982,10 +1500,11 @@ const App = (() => {
   }
 
   return {
-    boot, enterMenu, goBackToMenu, startFreshOrder,
+    boot, enterMenu, goBackToMenu, goBackToMenuFromBill, startFreshOrder,
     openCart, closeCart, placeOrder,
     openOrderTypeModal, closeOrderTypeModal,
     selectOrderType, confirmDineIn, confirmDelivery,
+    showOrderStep: _showOrderStep,   // ← ADD THIS
     generateBill, downloadBillPDF, shareBillWhatsApp, closeBillAndReset,
     toggleTheme, showToast, renderHotelName,
   };

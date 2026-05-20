@@ -170,6 +170,12 @@
 <section id="bill" class="screen">
   <div class="bill-page">
 
+    <!-- Back to menu -->
+    <button class="bill-back-btn" onclick="App.goBackToMenuFromBill()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      Back to Menu
+    </button>
+
     <!-- Bill header watermark -->
     <div class="bill-watermark">PENDING</div>
 
@@ -245,9 +251,21 @@
 
     <!-- Grand total -->
     <div class="bill-total-block">
+      <!-- <div class="bill-total-row">
+        <span>Food Subtotal</span>
+        <span id="billSubTotal">—</span>
+      </div> -->
       <div class="bill-total-row">
         <span>Food Subtotal</span>
         <span id="billSubTotal">—</span>
+      </div>
+      <div class="bill-total-row" id="billCgstRow">
+        <span id="billCgstLabel">CGST (5%)</span>
+        <span id="billCgst">—</span>
+      </div>
+      <div class="bill-total-row" id="billSgstRow">
+        <span id="billSgstLabel">SGST (5%)</span>
+        <span id="billSgst">—</span>
       </div>
       <div class="bill-total-row bill-delivery-row" id="billDeliveryRow" style="display:none">
         <span>🛵 Delivery Charge</span>
@@ -309,7 +327,7 @@
     <textarea class="notes-input" id="orderNotes" rows="2" placeholder="Allergies, spice level, special requests…"></textarea>
   </div>
 
-  <div class="drawer-footer">
+  <!-- <div class="drawer-footer">
     <div class="order-totals-row">
       <div class="order-summary-item">
         <span class="osi-label">Items</span>
@@ -320,7 +338,24 @@
         <span class="osi-label">Total</span>
         <span class="osi-val osi-total" id="drawerTotal">₹0</span>
       </div>
+    </div> -->
+
+  <div class="drawer-footer">
+    <!-- AFTER -->
+    <div class="order-totals-row" id="orderTotalsRow">
+      <div class="order-summary-item">
+        <span class="osi-label">Items</span>
+        <span class="osi-val" id="drawerItemCount2">0</span>
+      </div>
+      <div class="order-summary-divider"></div>
+      <div class="order-summary-item" id="drawerTotalCol">
+        <span class="osi-label">Total</span>
+        <span class="osi-val osi-total" id="drawerTotal">₹0</span>
+      </div>
     </div>
+    <!-- Round-by-round breakdown (shown when 2+ rounds exist) -->
+    <div class="drawer-rounds-breakdown" id="drawerRoundsBreakdown" style="display:none"></div>
+  </div>
 
     <button class="proceed-btn ripple" onclick="App.openOrderTypeModal()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;flex-shrink:0"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
@@ -381,7 +416,7 @@
 
     <div class="order-step" id="stepDineIn">
       <div class="order-modal-handle"></div>
-      <button class="order-modal-back" onclick="App.openOrderTypeModal()">
+      <button class="order-modal-back" onclick="App.showOrderStep('stepChoose')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>Back
       </button>
       <h3 class="order-modal-title serif">🍽️ Dine-In Details</h3>
@@ -397,7 +432,7 @@
 
     <div class="order-step" id="stepDelivery">
       <div class="order-modal-handle"></div>
-      <button class="order-modal-back" onclick="App.openOrderTypeModal()">
+      <button class="order-modal-back" onclick="App.showOrderStep('stepChoose')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>Back
       </button>
       <h3 class="order-modal-title serif">🛵 Delivery Details</h3>
@@ -407,9 +442,10 @@
         <span class="dcb-icon">🛵</span>
         <div class="dcb-text">
           <span class="dcb-label">Home Delivery Charge</span>
-          <span class="dcb-amount" id="deliveryChargeDisplay">+ ₹40 will be added</span>
+          <!-- <span class="dcb-amount" id="deliveryChargeDisplay">+ ₹40 will be added</span> -->
+          <span class="dcb-amount" id="deliveryChargeDisplay"></span>
         </div>
-        <span class="dcb-badge">₹40</span>
+        <span class="dcb-badge" id="deliveryChargeBadge"></span>
       </div>
 
       <div class="field-group">
@@ -433,7 +469,7 @@
         </div>
         <div class="dts-row dts-delivery">
           <span>🛵 Delivery Charge</span>
-          <span>+ ₹40</span>
+          <span id="deliveryChargeTotal"></span>
         </div>
         <div class="dts-row dts-total">
           <span>Total Payable</span>
