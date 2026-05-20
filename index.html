@@ -3,46 +3,30 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
-  <meta name="theme-color" content="#0a0706" id="metaTheme"/>
+  <meta name="theme-color" content="#080807" id="metaTheme"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <link rel="icon" type="image/png" id="favicon" href="images/favicon.png"/>
   <title>Hotel Menu</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Jost:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Jost:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="css/style.css"/>
 </head>
-<body>
+<body data-theme="dark">
 
-<!-- ══════════════════════════════════════════════
-     PARTICLES LAYER — ambient floating dots
-══════════════════════════════════════════════ -->
 <canvas id="particleCanvas"></canvas>
 
-<!-- ══════════════════════════════════════════════
-     SCREEN 1 — WELCOME
-══════════════════════════════════════════════ -->
+<!-- ══════════════════ SCREEN 1 — WELCOME ══════════════════ -->
 <section id="welcome" class="screen active">
   <div class="welcome-bg"></div>
   <div class="welcome-grain"></div>
-
   <div class="welcome-content">
-
     <div class="welcome-top fade-up">
-      <span class="hotel-badge">
-        <span class="badge-dot"></span>
-        Fine Dining Experience
-        <span class="badge-dot"></span>
-      </span>
+      <span class="hotel-badge"><span class="badge-dot"></span>Fine Dining Experience<span class="badge-dot"></span></span>
     </div>
-
-    <div class="fade-up delay-1">
-      <h1 class="welcome-hotel-name serif"></h1>
-    </div>
-
+    <div class="fade-up delay-1"><h1 class="welcome-hotel-name serif"></h1></div>
     <p class="welcome-tagline fade-up delay-2"></p>
-
     <div class="guest-card fade-up delay-3">
       <div class="guest-card-header">
         <span class="guest-card-icon">👋</span>
@@ -51,24 +35,16 @@
       <div id="guestForm"></div>
       <button class="btn-primary ripple" onclick="App.enterMenu()">
         <span>Explore the Menu</span>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M5 12h14M12 5l7 7-7 7"/>
-        </svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
       </button>
     </div>
-
-    <p class="welcome-disclaimer fade-up delay-4">
-      By placing an order you agree to our dining terms &amp; conditions
-    </p>
+    <p class="welcome-disclaimer fade-up delay-4">By placing an order you agree to our dining terms &amp; conditions</p>
   </div>
 </section>
 
 
-<!-- ══════════════════════════════════════════════
-     SCREEN 2 — MENU
-══════════════════════════════════════════════ -->
+<!-- ══════════════════ SCREEN 2 — MENU ══════════════════ -->
 <section id="menu" class="screen">
-
   <header class="menu-header" id="menuHeader">
     <div class="menu-header-inner">
       <div class="header-left">
@@ -76,6 +52,11 @@
         <div class="header-hotel-name" id="headerHotelName"></div>
       </div>
       <div class="header-right">
+        <!-- Theme toggle -->
+        <button class="theme-btn ripple" onclick="App.toggleTheme()" aria-label="Toggle theme" title="Toggle light/dark">
+          <span id="themeIcon">☀️</span>
+        </button>
+        <!-- Cart -->
         <button class="cart-btn ripple" onclick="App.openCart()" aria-label="Open cart">
           <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
@@ -88,7 +69,6 @@
     </div>
   </header>
 
-  <!-- Hero banner -->
   <div class="menu-hero" id="menuHero">
     <img id="heroBanner" src="" alt="Restaurant" loading="eager" onload="this.classList.add('loaded')"/>
     <div class="menu-hero-overlay"></div>
@@ -101,17 +81,13 @@
     </div>
   </div>
 
-  <!-- Category tabs -->
   <div class="cat-tabs-wrap" id="catTabsWrap">
     <div class="cat-tabs" id="catTabs"></div>
   </div>
 
-  <!-- Search bar -->
   <div class="search-wrap">
     <div class="search-inner">
-      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
-      </svg>
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
       <input id="menuSearch" type="text" placeholder="Search dishes, cuisines…" autocomplete="off"/>
       <button class="search-clear" id="searchClear" onclick="Menu.clearSearch()" style="display:none">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
@@ -127,18 +103,13 @@
     <p>Visit our restaurant — we'd love to serve you again.</p>
     <a id="mapBtn" href="#" target="_blank" class="ripple">Open in Google Maps</a>
   </section>
-
 </section>
 
 
-<!-- ══════════════════════════════════════════════
-     SCREEN 3 — SUCCESS
-══════════════════════════════════════════════ -->
+<!-- ══════════════════ SCREEN 3 — SUCCESS ══════════════════ -->
 <section id="success" class="screen">
   <div class="success-bg-burst"></div>
-
   <div class="success-inner">
-
     <div class="success-anim-wrap">
       <div class="success-rings">
         <div class="success-ring-pulse r1"></div>
@@ -187,8 +158,126 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
         Add More
       </button>
-      <button class="success-btn-new ripple" onclick="App.startFreshOrder()">
-        🔄 New Order
+      <button class="success-btn-bill ripple" onclick="App.generateBill()">
+        🧾 Generate Bill
+      </button>
+    </div>
+  </div>
+</section>
+
+
+<!-- ══════════════════ SCREEN 4 — BILL ══════════════════ -->
+<section id="bill" class="screen">
+  <div class="bill-page">
+
+    <!-- Bill header watermark -->
+    <div class="bill-watermark">PENDING</div>
+
+    <!-- Restaurant letterhead -->
+    <div class="bill-letterhead">
+      <div class="bill-logo-row">
+        <div class="bill-hotel-emblem">🍽️</div>
+        <div>
+          <h2 class="bill-hotel-name serif" id="billHotelName">Hotel Kinara</h2>
+          <p class="bill-tagline">Order Bill · Pending Payment</p>
+        </div>
+      </div>
+      <div class="bill-gold-rule"></div>
+    </div>
+
+    <!-- Payment notice -->
+    <div class="bill-payment-notice">
+      🏧 Please take this bill to the <strong>billing desk</strong> to complete your payment
+    </div>
+
+    <!-- Bill meta -->
+    <div class="bill-meta">
+      <div class="bill-meta-row">
+        <span class="bm-label">Bill No.</span>
+        <span class="bm-val" id="billNumber">#000000</span>
+      </div>
+      <div class="bill-meta-row">
+        <span class="bm-label">Date</span>
+        <span class="bm-val" id="billDate">—</span>
+      </div>
+      <div class="bill-meta-row">
+        <span class="bm-label">Time</span>
+        <span class="bm-val" id="billTime">—</span>
+      </div>
+      <div class="bill-meta-row">
+        <span class="bm-label">Order Type</span>
+        <span class="bm-val" id="billOrderType">Dine-In</span>
+      </div>
+      <div class="bill-meta-row" id="billTableRow">
+        <span class="bm-label">Table No.</span>
+        <span class="bm-val" id="billTable">—</span>
+      </div>
+      <div class="bill-meta-row" id="billGuestRow">
+        <span class="bm-label">Guest</span>
+        <span class="bm-val" id="billGuest">—</span>
+      </div>
+      <div class="bill-meta-row" id="billAddressRow" style="display:none">
+        <span class="bm-label">Deliver To</span>
+        <span class="bm-val" id="billAddress">—</span>
+      </div>
+      <div class="bill-meta-row">
+        <span class="bm-label">Order Rounds</span>
+        <span class="bm-val" id="billRounds">—</span>
+      </div>
+    </div>
+
+    <!-- Rounds breakdown -->
+    <div class="bill-section">
+      <div class="bill-section-title">Order Summary by Round</div>
+      <div id="billRoundsList" class="bill-rounds-list"></div>
+    </div>
+
+    <!-- Items breakdown -->
+    <div class="bill-section">
+      <div class="bill-section-title">Items Ordered</div>
+      <div class="bill-items-header">
+        <span>Item</span>
+        <span>Qty</span>
+        <span>Amount</span>
+      </div>
+      <div id="billItems" class="bill-items-list"></div>
+    </div>
+
+    <!-- Grand total -->
+    <div class="bill-total-block">
+      <div class="bill-total-row">
+        <span>Food Subtotal</span>
+        <span id="billSubTotal">—</span>
+      </div>
+      <div class="bill-total-row bill-delivery-row" id="billDeliveryRow" style="display:none">
+        <span>🛵 Delivery Charge</span>
+        <span id="billDeliveryCharge">—</span>
+      </div>
+      <div class="bill-total-row bill-total-grand">
+        <span>Grand Total</span>
+        <span id="billGrandTotal" class="bill-grand-amount">—</span>
+      </div>
+    </div>
+
+    <!-- Thank you -->
+    <div class="bill-thankyou">
+      <div class="bill-thankyou-icon">🧾</div>
+      <p class="bill-thankyou-text" id="billPaymentNote">Please proceed to the billing desk</p>
+      <p class="bill-thankyou-sub" id="billPaymentSub">Show this bill & complete your payment there</p>
+    </div>
+
+    <!-- Actions -->
+    <div class="bill-actions">
+      <button class="bill-btn-download ripple" onclick="App.downloadBillPDF()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;margin-right:6px;flex-shrink:0"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download Bill PDF
+      </button>
+      <button class="bill-btn-whatsapp ripple" onclick="App.shareBillWhatsApp()">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:16px;height:16px;margin-right:6px;flex-shrink:0;fill:currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        Share Bill on WhatsApp
+      </button>
+      <button class="bill-btn-done ripple" onclick="App.closeBillAndReset()">
+        ✓ Done — Start New Order
       </button>
     </div>
 
@@ -196,14 +285,10 @@
 </section>
 
 
-<!-- ══════════════════════════════════════════════
-     CART DRAWER
-══════════════════════════════════════════════ -->
+<!-- ══════════════════ CART DRAWER ══════════════════ -->
 <div class="drawer-overlay" id="drawerOverlay" onclick="App.closeCart()"></div>
 <div class="drawer" id="drawer">
-  <div class="drawer-handle-wrap">
-    <div class="drawer-handle"></div>
-  </div>
+  <div class="drawer-handle-wrap"><div class="drawer-handle"></div></div>
   <div class="drawer-header">
     <div>
       <h3 class="drawer-title serif">Your Order <span id="drawerCount"></span></h3>
@@ -242,6 +327,11 @@
       Proceed to Order
     </button>
 
+    <!-- Generate Bill — shown once at least one order is placed -->
+    <button class="gen-bill-btn ripple" id="genBillBtn" style="display:none" onclick="App.generateBill()">
+      🧾 Generate Bill
+    </button>
+
     <button class="add-more-btn" id="addMoreBtn" style="display:none" onclick="App.closeCart(); App.goBackToMenu();">
       ＋ Add More Items to Order
     </button>
@@ -252,9 +342,7 @@
 </div>
 
 
-<!-- ══════════════════════════════════════════════
-     FLOATING CART BAR
-══════════════════════════════════════════════ -->
+<!-- ══════════════════ FLOATING CART BAR ══════════════════ -->
 <div class="cart-bar" id="cartBar" onclick="App.openCart()">
   <div class="cart-bar-inner">
     <div class="cart-bar-left">
@@ -269,13 +357,10 @@
 </div>
 
 
-<!-- ══════════════════════════════════════════════
-     ORDER TYPE MODAL
-══════════════════════════════════════════════ -->
+<!-- ══════════════════ ORDER TYPE MODAL ══════════════════ -->
 <div class="order-modal-overlay" id="orderTypeModal" onclick="if(event.target===this) App.closeOrderTypeModal()">
   <div class="order-modal">
 
-    <!-- Step 1: Choose -->
     <div class="order-step active" id="stepChoose">
       <div class="order-modal-handle"></div>
       <h3 class="order-modal-title serif">How would you like your order?</h3>
@@ -294,12 +379,10 @@
       <button class="order-modal-cancel" onclick="App.closeOrderTypeModal()">Cancel</button>
     </div>
 
-    <!-- Step 2a: Dine-In -->
     <div class="order-step" id="stepDineIn">
       <div class="order-modal-handle"></div>
       <button class="order-modal-back" onclick="App.openOrderTypeModal()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-        Back
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>Back
       </button>
       <h3 class="order-modal-title serif">🍽️ Dine-In Details</h3>
       <div class="field-group">
@@ -312,14 +395,23 @@
       </button>
     </div>
 
-    <!-- Step 2b: Delivery -->
     <div class="order-step" id="stepDelivery">
       <div class="order-modal-handle"></div>
       <button class="order-modal-back" onclick="App.openOrderTypeModal()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-        Back
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>Back
       </button>
       <h3 class="order-modal-title serif">🛵 Delivery Details</h3>
+
+      <!-- Delivery charge info banner -->
+      <div class="delivery-charge-banner" id="deliveryChargeBanner">
+        <span class="dcb-icon">🛵</span>
+        <div class="dcb-text">
+          <span class="dcb-label">Home Delivery Charge</span>
+          <span class="dcb-amount" id="deliveryChargeDisplay">+ ₹40 will be added</span>
+        </div>
+        <span class="dcb-badge">₹40</span>
+      </div>
+
       <div class="field-group">
         <label class="field-label" for="deliveryName">Full Name <span class="req-tag">*required</span></label>
         <input id="deliveryName" type="text" class="field-input" placeholder="e.g. Rahul Sharma" autocomplete="name" autocapitalize="words"/>
@@ -332,6 +424,22 @@
         <label class="field-label" for="deliveryAddress">Delivery Address <span class="req-tag">*required</span></label>
         <textarea id="deliveryAddress" class="field-input field-textarea" placeholder="House/Flat no., Street, Area, City, Pincode" rows="3" autocomplete="street-address"></textarea>
       </div>
+
+      <!-- Delivery order total summary -->
+      <div class="delivery-total-summary" id="deliveryTotalSummary">
+        <div class="dts-row">
+          <span>Food Subtotal</span>
+          <span id="deliverySubtotalDisplay">—</span>
+        </div>
+        <div class="dts-row dts-delivery">
+          <span>🛵 Delivery Charge</span>
+          <span>+ ₹40</span>
+        </div>
+        <div class="dts-row dts-total">
+          <span>Total Payable</span>
+          <span id="deliveryGrandTotalDisplay">—</span>
+        </div>
+      </div>
       <button class="whatsapp-btn ripple" style="margin-top:12px" onclick="App.confirmDelivery()">
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
         Send Order via WhatsApp
@@ -342,14 +450,13 @@
 </div>
 
 
-<!-- ══════════════════════════════════════════════
-     TOAST
-══════════════════════════════════════════════ -->
+<!-- ══════════════════ TOAST ══════════════════ -->
 <div class="toast" id="toast" role="status" aria-live="polite">
   <span class="toast-icon" id="toastIcon">✓</span>
   <span id="toastMsg"></span>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="js/config.js"></script>
 <script src="js/app.js"></script>
 <script src="js/menu.js"></script>

@@ -12,7 +12,7 @@ const HOTEL_CONFIG = {
   hotelName:    "Hotel Kinara",
   tagline:      "Authentic flavours, served with love",
   currency:     "₹",
-  whatsapp:     "919284885146",   // Replace: 91 + 10-digit mobile. e.g. "919876543210"
+  whatsapp:     "91XXXXXXXXXX",   // Replace: 91 + 10-digit mobile. e.g. "919876543210"
 
   homeDeliveryEnabled: true,
   googleMapsLink: "https://maps.google.com",

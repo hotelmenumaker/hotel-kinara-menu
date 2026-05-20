@@ -14,8 +14,15 @@ const Cart = (() => {
   function getTotals() {
     const entries = Object.values(_cart);
     const count   = entries.reduce((s, e) => s + e.qty, 0);
-    const total   = entries.reduce((s, e) => s + e.item.price * e.qty, 0);
-    return { entries, count, total };
+    const subtotal = entries.reduce((s, e) => s + e.item.price * e.qty, 0);
+
+    const lastOrder = _previousOrders[_previousOrders.length - 1];
+    const isDelivery = lastOrder && lastOrder.orderType === 'delivery';
+
+    const deliveryCharge = isDelivery ? 40 : 0;
+    const total = subtotal + deliveryCharge;
+
+    return { entries, count, subtotal, deliveryCharge, total };
   }
 
   function isEmpty() { return Object.keys(_cart).length === 0; }
@@ -66,6 +73,11 @@ const Cart = (() => {
     const addMoreBtn = document.getElementById('addMoreBtn');
     const cartBtn    = document.querySelector('.cart-btn');
 
+    // Never show cart bar on bill or success screens
+    const activeScreen = document.querySelector('.screen.active');
+    const activeId = activeScreen ? activeScreen.id : '';
+    const hiddenScreens = ['bill', 'success'];
+
     if (count > 0) {
       if (countEl && !countEl.classList.contains('show')) {
         // First item added — bounce the cart button
@@ -75,12 +87,16 @@ const Cart = (() => {
         }
       }
       if (countEl) { countEl.textContent = count; countEl.classList.add('show'); }
-      cartBar.classList.add('show');
+      if (!hiddenScreens.includes(activeId)) {
+        cartBar.classList.add('show');
+      } else {
+        cartBar.classList.remove('show');
+      }
       document.getElementById('barCount').textContent  = `${count} item${count > 1 ? 's' : ''}`;
       document.getElementById('barAmount').textContent = `${HOTEL_CONFIG.currency}${total}`;
     } else {
       if (countEl) countEl.classList.remove('show');
-      if (_previousOrders.length > 0) {
+      if (_previousOrders.length > 0 && !hiddenScreens.includes(activeId)) {
         cartBar.classList.add('show');
         document.getElementById('barCount').textContent  = `Order ${_previousOrders.length} sent ✓`;
         document.getElementById('barAmount').textContent = `+ Add more items`;
@@ -100,6 +116,8 @@ const Cart = (() => {
     if (addMoreBtn) addMoreBtn.style.display = _previousOrders.length > 0 ? 'flex' : 'none';
     const freshOrderBtn = document.getElementById('freshOrderBtn');
     if (freshOrderBtn) freshOrderBtn.style.display = _previousOrders.length > 0 ? 'flex' : 'none';
+    const genBillBtn = document.getElementById('genBillBtn');
+    if (genBillBtn) genBillBtn.style.display = _previousOrders.length > 0 ? 'flex' : 'none';
   }
 
   function renderDrawer() {
@@ -110,7 +128,17 @@ const Cart = (() => {
     if (titleSub) titleSub.textContent = count > 0 ? `(${count})` : '';
 
     document.getElementById('drawerItemCount').textContent = `${count} item${count !== 1 ? 's' : ''}`;
-    document.getElementById('drawerTotal').textContent     = `${currency}${total}`;
+
+    const lastOrder = _previousOrders[_previousOrders.length - 1];
+    const isDelivery = lastOrder && lastOrder.orderType === 'delivery';
+    const deliveryCharge = isDelivery ? 40 : 0;
+
+    const totalElement = document.getElementById('drawerTotal');
+    if (totalElement) {
+      totalElement.innerHTML = isDelivery
+        ? `${currency}${total - deliveryCharge} + <span style="color:#f59e0b">Delivery ${currency}${deliveryCharge}</span> = <strong>${currency}${total}</strong>`
+        : `${currency}${total}`;
+    }
 
     const itemsDiv = document.getElementById('drawerItems');
 
@@ -180,7 +208,7 @@ const Cart = (() => {
      orderInfo = { type, name, mobile, table?, address?, notes }
   ───────────────────────────────────────────────────── */
   function placeOrder(orderInfo) {
-    const { entries, count, total } = getTotals();
+    const { entries, count, subtotal } = getTotals();
     if (count === 0) { App.showToast('Please add items first'); return null; }
 
     const currency = HOTEL_CONFIG.currency;
@@ -189,6 +217,9 @@ const Cart = (() => {
     const date     = now.toLocaleDateString('en-IN');
     const day      = now.toLocaleDateString('en-IN', { weekday: 'long' });
     const isAddOn  = _previousOrders.length > 0;
+    const isDelivery = orderInfo.type === 'delivery';
+    const deliveryCharge = isDelivery ? 40 : 0;
+    const orderTotal = subtotal + deliveryCharge;
 
     let msg = '';
     if (isAddOn) {
@@ -224,7 +255,12 @@ const Cart = (() => {
     });
 
     msg += `──────────────────\n`;
-    msg += `*TOTAL: ${currency}${total}*\n`;
+
+    if (isDelivery) {
+      msg += `🛵 Delivery Charges: ${currency}${deliveryCharge}\n`;
+    }
+
+    msg += `*TOTAL: ${currency}${orderTotal}*\n`;
 
     if (orderInfo.notes && orderInfo.notes.trim()) {
       msg += `\n📝 *Note:* ${orderInfo.notes.trim()}\n`;
@@ -236,8 +272,9 @@ const Cart = (() => {
       round: _orderRound,
       orderType: orderInfo.type,
       items: entries.map(e => ({ item: e.item, qty: e.qty })),
-      total, time, date, day,
-      table: orderInfo.table || null,
+      total: orderTotal, time, date, day,
+      name:    orderInfo.name    || null,
+      table:   orderInfo.table   || null,
       address: orderInfo.address || null,
     });
     _orderRound++;
