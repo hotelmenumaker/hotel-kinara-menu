@@ -218,17 +218,41 @@ const App = (() => {
     chip.style.display = parts.length > 0 ? '' : 'none';
   }
 
-  function _restoreSession() {
-    const lastPage = localStorage.getItem('currentPage');
-    if (_guest && (_guest.name || _guest.mobile || _guest.table)) {
-      const ni = document.getElementById('fieldName');
-      const mi = document.getElementById('fieldMobile');
-      if (ni) ni.value = _guest.name   || '';
-      if (mi) mi.value = _guest.mobile || '';
-      _updateGuestChip();
+  // function _restoreSession() {
+  //   const lastPage = localStorage.getItem('currentPage');
+  //   if (_guest && (_guest.name || _guest.mobile || _guest.table)) {
+  //     const ni = document.getElementById('fieldName');
+  //     const mi = document.getElementById('fieldMobile');
+  //     if (ni) ni.value = _guest.name   || '';
+  //     if (mi) mi.value = _guest.mobile || '';
+  //     _updateGuestChip();
+  //   }
+  //   if (lastPage && lastPage !== 'welcome') { Menu.init(); _showScreen(lastPage); }
+  // }
+    function _restoreSession() {
+      const lastPage = localStorage.getItem('currentPage');
+      if (_guest && (_guest.name || _guest.mobile || _guest.table)) {
+        const ni = document.getElementById('fieldName');
+        const mi = document.getElementById('fieldMobile');
+        if (ni) ni.value = _guest.name   || '';
+        if (mi) mi.value = _guest.mobile || '';
+        _updateGuestChip();
+      }
+      if (lastPage && lastPage !== 'welcome') {
+        Menu.init();
+        _showScreen(lastPage);
+        // Re-render bill screen if user was on it when they refreshed
+        if (lastPage === 'bill') {
+          const orders = Cart.getPreviousOrders();
+          if (orders && orders.length > 0) {
+            _renderBill(orders);
+          } else {
+            // No orders to show — fall back to menu
+            _showScreen('menu');
+          }
+        }
+      }
     }
-    if (lastPage && lastPage !== 'welcome') { Menu.init(); _showScreen(lastPage); }
-  }
 
   /* ═══════════════════════ SCREENS ═══════════════════════════ */
   function _showScreen(id) {
