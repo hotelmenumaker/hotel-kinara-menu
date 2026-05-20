@@ -2,6 +2,7 @@
 ### Mobile-first digital menu with WhatsApp ordering
 
 Zero app install needed. Guest scans a QR → browses → orders via WhatsApp.
+Version : 3.3
 
 ---
 
@@ -60,14 +61,28 @@ currency:   "₹",
 whatsapp:   "919876543210",  // Country code + number, no spaces, no +
 ```
 
+**Enable home delivery and set delivery charge:**
+```js
+homeDeliveryEnabled: true,
+deliveryCharge: 30,   // Charge in your currency — shown on delivery step and bill
+```
+
+**Enable GST (optional):**
+```js
+gst: {
+  enabled: true,
+  cgst: 5,   // CGST percentage
+  sgst: 5,   // SGST percentage
+},
+```
+> Set both to `0` and `enabled: false` to hide GST completely.
+
 **Change colors to match your hotel brand:**
 ```js
 theme: {
   accent:     "#C9A84C",   // Primary color — buttons, active tabs, prices
   accentDark: "#8a6f32",   // Darker shade of accent
   accentText: "#0a0706",   // Text ON accent buttons — use #ffffff for dark accents
-  bgColor:    "#0a0a0a",   // Page background
-  // … rest are auto-calculated
 }
 ```
 
@@ -101,7 +116,6 @@ Ocean Teal:       accent=#0d9488  accentDark=#0a7063  accentText=#ffffff
 guestForm: {
   askName:   true,    // true = show, false = hide
   askMobile: false,   // hidden — guests won't see it
-  askTable:  true,    // table is always recommended
 },
 ```
 
@@ -130,16 +144,18 @@ npx serve .
 
 ```
 1. Guest scans QR code at table
-2. Welcome screen → enters Name (optional) + Mobile (optional) + Table No (required)
+2. Welcome screen → enters Name (optional) + Mobile (optional)
 3. Browses menu by category → taps + to add items
 4. Gold floating bar appears at bottom showing item count + total
 5. Taps bar → cart drawer slides up
 6. Reviews order + adds special instructions (optional)
-7. Taps "Send Order via WhatsApp" → WhatsApp opens with pre-filled message
-8. Guest hits Send → kitchen receives order
-9. Success screen shown
-10. Guest can tap "Add More Items" to order again (bread, water, dessert etc.)
-    → Second order is sent as "Additional Order (Round 2)" so kitchen knows it's an add-on
+7. Taps "Proceed to Order" → chooses Dine-In or Home Delivery
+8. Fills in table number (dine-in) or delivery details (delivery)
+9. Taps "Send Order via WhatsApp" → WhatsApp opens with pre-filled message
+10. Guest hits Send → kitchen/owner receives order
+11. Success screen shown
+12. Guest can tap "Add More Items" to order again (bread, water, dessert etc.)
+    → Additional orders are sent as "Additional Order (Round 2)" so kitchen knows it's an add-on
 ```
 
 ---
@@ -147,10 +163,39 @@ npx serve .
 ## ➕ MULTIPLE ORDER ROUNDS (Re-ordering)
 
 After the first order is placed:
-- The **floating cart bar** stays visible, showing "Order 1 sent ✓ + Add more items"
+- The **floating cart bar** stays visible, showing "Order 1 placed ✓ · Tap to Generate Bill"
 - Guest can keep browsing and add more items
 - Second order goes to WhatsApp as **"➕ Additional Order (Round 2)"**
 - This makes it clear to kitchen staff it's an add-on to an existing table
+- For home delivery, **delivery charge is only applied on the first round** — add-on rounds are free
+
+---
+
+## 🧾 BILL GENERATION
+
+After one or more orders are placed:
+- Guest (or staff) taps **"Generate Bill"** from the cart drawer or success screen
+- Bill screen shows all rounds, all items, GST breakdown, delivery charge (if any), and grand total
+- **Download PDF** — generates a thermal-style receipt PDF (80mm format)
+- **Share on WhatsApp** — sends a formatted bill summary to the hotel's WhatsApp number
+- Bill totals are consistent: GST is calculated on food subtotal only (delivery charge is not taxed)
+
+---
+
+## 💰 BILLING & GST CALCULATION
+
+The system calculates totals as follows:
+
+```
+Food Subtotal  =  sum of all item prices × quantities (across all rounds)
+CGST           =  Food Subtotal × CGST%
+SGST           =  Food Subtotal × SGST%
+Delivery       =  deliveryCharge (first round only, home delivery only)
+─────────────────────────────────────────────────────
+Grand Total    =  Food Subtotal + CGST + SGST + Delivery
+```
+
+> GST is **never** applied on the delivery charge — only on food.
 
 ---
 
@@ -193,8 +238,11 @@ Once live, generate a QR code for the URL at [qr-code-generator.com](https://www
 | WhatsApp not opening | Check `whatsapp` in config: no `+`, no spaces, start with country code. e.g. `"919876543210"` |
 | Colors not updating | Hard-refresh browser: `Ctrl+Shift+R` (Windows) or `Cmd+Shift+R` (Mac) |
 | Logo not showing | App auto-hides it if image fails — check `images/logo.png` exists with correct name |
-| Cart bar disappears after order | Expected behaviour — if it does, the previousOrders check is working. Bar should stay visible. |
-| Menu items from old subcategory showing | Switch the subcategory pill to refresh — scroll spy is working correctly |
+| Cart bar disappears after order | Expected behaviour on bill/success screens. Returns when back on menu screen. |
+| Back button in delivery step not working | Ensure `showOrderStep` is exported in `app.js` return object and `index.html` calls `App.showOrderStep('stepChoose')` |
+| Delivery charge showing ₹0 on round 2 | Ensure `_updateDeliveryTotals()` uses `HOTEL_CONFIG.deliveryCharge` directly, not `isAddOnRound ? 0 : charge` |
+| Bill total different from order total | Ensure GST is calculated on `foodOnly` (before delivery is added) in both `_buildBillData()` and `placeOrder()` |
+| PDF subtotal incorrect | Ensure `_generatePDF()` uses `d.foodSubtotal` instead of `d.grandTotal - d.deliveryCharge` |
 
 ---
 
