@@ -6,7 +6,9 @@
 
 const App = (() => {
 
-  let _guest      = JSON.parse(localStorage.getItem('hotel_guest') || '{"name":"","mobile":"","table":""}');
+  // let _guest      = JSON.parse(localStorage.getItem('hotel_guest') || '{"name":"","mobile":"","table":""}');
+  let _guest = JSON.parse(localStorage.getItem('hotel_guest') || '{"name":"","mobile":"","table":"","address":""}');
+  let _pendingNote = '';
   let _isDark     = localStorage.getItem('hotel_theme') !== 'light';
   let _toastTimer = null;
   let _toastHideTimer = null;
@@ -277,12 +279,23 @@ const App = (() => {
         }
       }
 
+      // if (lastPage === 'success') {
+      //   const savedResult = localStorage.getItem('hotel_last_result');
+      //   if (savedResult) {
+      //     _renderSuccess(JSON.parse(savedResult));
+      //   } else {
+      //     // No result saved — fall back to menu
+      //     _showScreen('menu');
+      //   }
+      // }
       if (lastPage === 'success') {
         const savedResult = localStorage.getItem('hotel_last_result');
         if (savedResult) {
-          _renderSuccess(JSON.parse(savedResult));
+          // Small delay to ensure Cart has fully loaded from localStorage
+          setTimeout(() => {
+            _renderSuccess(JSON.parse(savedResult));
+          }, 100);
         } else {
-          // No result saved — fall back to menu
           _showScreen('menu');
         }
       }
@@ -315,7 +328,8 @@ const App = (() => {
     localStorage.removeItem('hotel_guest');
     localStorage.removeItem('currentPage');
     localStorage.removeItem('hotel_last_result'); 
-    _guest = { name: '', mobile: '', table: '' };
+    // _guest = { name: '', mobile: '', table: '' };
+    _guest = { name: '', mobile: '', table: '', address: '' };
     ['fieldName','fieldMobile'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
     _showScreen('welcome');
   }
@@ -347,35 +361,136 @@ const App = (() => {
   }
 
   /* ═══════════════════════ ORDER TYPE MODAL ══════════════════ */
+  // function openOrderTypeModal() {
+  //   // restore note to whichever step is about to show
+  //   setTimeout(() => {
+  //     const din = document.getElementById('dineNotes');
+  //     const dn  = document.getElementById('deliveryNotes');
+  //     if (din && !din.value) din.value = _pendingNote;
+  //     if (dn  && !dn.value)  dn.value  = _pendingNote;
+  //   }, 50);
+  //   if (Cart.isEmpty()) { showToast('Please add items first', '🛒'); return; }
+  //   const isAdditional = Cart.getPreviousOrders().length > 0;
+  //   // If additional round and previous order was dine-in with a known table, skip straight to dine-in step
+  //   // if (isAdditional) {
+  //   //   const prevOrders = Cart.getPreviousOrders();
+  //   //   const lastOrder = prevOrders[prevOrders.length - 1];
+  //   //   if (lastOrder && lastOrder.orderType === 'dine-in' && (lastOrder.table || _guest.table)) {
+  //   //     if (!_guest.table && lastOrder.table) _guest.table = lastOrder.table;
+  //   //     document.getElementById('orderTypeModal').classList.add('show');
+  //   //     _showOrderStep('stepDineIn');
+  //   //     const ti = document.getElementById('orderTable');
+  //   //     if (ti) ti.value = _guest.table || lastOrder.table || '';
+  //   //     return;
+  //   //   }
+  //   // }
+  //   if (isAdditional) {
+  //     const prevOrders = Cart.getPreviousOrders();
+  //     const lastOrder = prevOrders[prevOrders.length - 1];
+  //     if (lastOrder && lastOrder.orderType === 'dine-in' && (lastOrder.table || _guest.table)) {
+  //       if (!_guest.table && lastOrder.table) _guest.table = lastOrder.table;
+  //       document.getElementById('orderTypeModal').classList.add('show');
+  //       _showOrderStep('stepDineIn');
+  //       const ti = document.getElementById('orderTable');
+  //       if (ti) ti.value = _guest.table || lastOrder.table || '';
+  //       const isAddOn = Cart.getPreviousOrders().length > 0;
+  //       const din = document.getElementById('dineNotes');
+  //       if (din && isAddOn) din.value = '';   // clear for round 2+
+  //       return;
+  //     }
+  //     // If additional round and previous order was home delivery, skip straight to delivery step
+  //     if (lastOrder && lastOrder.orderType === 'delivery') {
+  //       document.getElementById('orderTypeModal').classList.add('show');
+  //       _showOrderStep('stepDelivery');
+  //       const ni = document.getElementById('deliveryName');
+  //       const mi = document.getElementById('deliveryMobile');
+  //       const ai = document.getElementById('deliveryAddress');
+  //       if (ni && _guest.name)    ni.value = _guest.name;
+  //       if (mi && _guest.mobile)  mi.value = _guest.mobile;
+  //       if (ai && _guest.address) ai.value = _guest.address;
+  //       const dn = document.getElementById('deliveryNotes');
+  //       if (dn && isAddOn) dn.value = '';    // clear for round 2+  
+  //       _updateDeliveryTotals();
+  //       return;
+  //     }
+  //   }
+  //   if (!HOTEL_CONFIG.homeDeliveryEnabled) {
+  //     // Skip choice screen, go straight to dine-in
+  //     _showOrderStep('stepDineIn');
+  //     const ti = document.getElementById('orderTable');
+  //     if (ti && _guest.table) ti.value = _guest.table;
+  //     document.getElementById('orderTypeModal').classList.add('show');
+  //     return;
+  //   }
+  //   document.getElementById('orderTypeModal').classList.add('show');
+  //   _showOrderStep('stepChoose');
+  // }
+
   function openOrderTypeModal() {
+    // restore note to whichever step is about to show
+    setTimeout(() => {
+      const din = document.getElementById('dineNotes');
+      const dn  = document.getElementById('deliveryNotes');
+      if (din && !din.value) din.value = _pendingNote;
+      if (dn  && !dn.value)  dn.value  = _pendingNote;
+    }, 50);
+
     if (Cart.isEmpty()) { showToast('Please add items first', '🛒'); return; }
     const isAdditional = Cart.getPreviousOrders().length > 0;
-    // If additional round and previous order was dine-in with a known table, skip straight to dine-in step
-    // if (isAdditional) {
-    //   const prevOrders = Cart.getPreviousOrders();
-    //   const lastOrder = prevOrders[prevOrders.length - 1];
-    //   if (lastOrder && lastOrder.orderType === 'dine-in' && (lastOrder.table || _guest.table)) {
-    //     if (!_guest.table && lastOrder.table) _guest.table = lastOrder.table;
-    //     document.getElementById('orderTypeModal').classList.add('show');
-    //     _showOrderStep('stepDineIn');
-    //     const ti = document.getElementById('orderTable');
-    //     if (ti) ti.value = _guest.table || lastOrder.table || '';
-    //     return;
-    //   }
-    // }
+
     if (isAdditional) {
       const prevOrders = Cart.getPreviousOrders();
-      const lastOrder = prevOrders[prevOrders.length - 1];
+      const lastOrder  = prevOrders[prevOrders.length - 1];
+      const isAddOn    = prevOrders.length > 0;   // ← declared here for both blocks
+
+      // if (lastOrder && lastOrder.orderType === 'dine-in' && (lastOrder.table || _guest.table)) {
+      //   if (!_guest.table && lastOrder.table) _guest.table = lastOrder.table;
+      //   document.getElementById('orderTypeModal').classList.add('show');
       if (lastOrder && lastOrder.orderType === 'dine-in' && (lastOrder.table || _guest.table)) {
-        if (!_guest.table && lastOrder.table) _guest.table = lastOrder.table;
-        document.getElementById('orderTypeModal').classList.add('show');
+      if (HOTEL_CONFIG.allowAdditionalRounds?.dineIn === false) {
+        showToast('Additional rounds not allowed for dine-in', '⚠️');
+        closeCart();
+        return;
+      }
+      if (!_guest.table && lastOrder.table) _guest.table = lastOrder.table;
+      document.getElementById('orderTypeModal').classList.add('show');
         _showOrderStep('stepDineIn');
         const ti = document.getElementById('orderTable');
         if (ti) ti.value = _guest.table || lastOrder.table || '';
+        const din = document.getElementById('dineNotes');
+        if (din && isAddOn) din.value = '';
+        _pendingNote = '';
         return;
       }
-      // If additional round and previous order was home delivery, skip straight to delivery step
+
+      // if (lastOrder && lastOrder.orderType === 'delivery') {
+      //   document.getElementById('orderTypeModal').classList.add('show');
+      //   _showOrderStep('stepDelivery');
+
+      //   const ni = document.getElementById('deliveryName');
+      //   const mi = document.getElementById('deliveryMobile');
+      //   const ai = document.getElementById('deliveryAddress');
+      //   if (ni && _guest.name)    ni.value = _guest.name;
+      //   if (mi && _guest.mobile)  mi.value = _guest.mobile;
+      //   if (ai && _guest.address) ai.value = _guest.address;
+      //   const dn = document.getElementById('deliveryNotes');
+      //   if (dn && isAddOn) dn.value = '';
+      //   _pendingNote = '';
+      //   _updateDeliveryTotals();
+      //   return;
+      // }
       if (lastOrder && lastOrder.orderType === 'delivery') {
+        // Check if within delivery order window
+        const windowMins   = HOTEL_CONFIG.deliveryOrderWindow || 10;
+        const firstTime    = Cart.getFirstOrderTime();
+        const withinWindow = firstTime && (Date.now() - firstTime) < windowMins * 60 * 1000;
+
+        if (!withinWindow) {
+          showToast(`Additional orders only allowed within ${windowMins} mins of first order`, '⏰');
+          closeCart();
+          return;
+        }
+
         document.getElementById('orderTypeModal').classList.add('show');
         _showOrderStep('stepDelivery');
         const ni = document.getElementById('deliveryName');
@@ -384,10 +499,22 @@ const App = (() => {
         if (ni && _guest.name)    ni.value = _guest.name;
         if (mi && _guest.mobile)  mi.value = _guest.mobile;
         if (ai && _guest.address) ai.value = _guest.address;
+        const dn = document.getElementById('deliveryNotes');
+        if (dn && isAddOn) dn.value = '';
+        _pendingNote = '';
         _updateDeliveryTotals();
         return;
       }
     }
+
+    if (!HOTEL_CONFIG.homeDeliveryEnabled) {
+      _showOrderStep('stepDineIn');
+      const ti = document.getElementById('orderTable');
+      if (ti && _guest.table) ti.value = _guest.table;
+      document.getElementById('orderTypeModal').classList.add('show');
+      return;
+    }
+
     document.getElementById('orderTypeModal').classList.add('show');
     _showOrderStep('stepChoose');
   }
@@ -403,27 +530,58 @@ const App = (() => {
     if (el) el.classList.add('active');
   }
 
+  // function selectOrderType(type) {
+  //   if (type === 'dine') {
+  //     _showOrderStep('stepDineIn');
+  //     const ti = document.getElementById('orderTable');
+  //     if (ti && _guest.table) ti.value = _guest.table;
+  //     setTimeout(() => ti && ti.focus(), 300);
+  //   } else {
+  //     _showOrderStep('stepDelivery');
+  //     const ni = document.getElementById('deliveryName');
+  //     const mi = document.getElementById('deliveryMobile');
+  //     if (ni && _guest.name)   ni.value = _guest.name;
+  //     if (mi && _guest.mobile) mi.value = _guest.mobile;
+  //     // Update delivery total summary
+  //     _updateDeliveryTotals();
+  //     setTimeout(() => ni && !ni.value && ni.focus(), 300);
+  //   }
+  // }
+
   function selectOrderType(type) {
     if (type === 'dine') {
       _showOrderStep('stepDineIn');
       const ti = document.getElementById('orderTable');
       if (ti && _guest.table) ti.value = _guest.table;
+      // carry over any delivery note typed before switching
+      const dn = document.getElementById('deliveryNotes');
+      const din = document.getElementById('dineNotes');
+      if (dn && din && dn.value && !din.value) din.value = dn.value;
       setTimeout(() => ti && ti.focus(), 300);
     } else {
       _showOrderStep('stepDelivery');
       const ni = document.getElementById('deliveryName');
       const mi = document.getElementById('deliveryMobile');
+      // carry over any dine note typed before switching
+      const din = document.getElementById('dineNotes');
+      const dn = document.getElementById('deliveryNotes');
+      if (din && dn && din.value && !dn.value) dn.value = din.value;
       if (ni && _guest.name)   ni.value = _guest.name;
       if (mi && _guest.mobile) mi.value = _guest.mobile;
-      // Update delivery total summary
       _updateDeliveryTotals();
       setTimeout(() => ni && !ni.value && ni.focus(), 300);
     }
   }
 
-  // function backToOrderTypeChoice() {
-  //   _showOrderStep('stepChoose');
-  // }
+  function backToOrderTypeChoice() {
+    const prevOrders = Cart.getPreviousOrders();
+    if (prevOrders.length > 0) {
+      // Additional round — going "back" should just close the modal
+      closeOrderTypeModal();
+    } else {
+      _showOrderStep('stepChoose');
+    }
+  }
 
   function _updateDeliveryTotals() {
     const { subtotal } = Cart.getTotals();
@@ -434,10 +592,28 @@ const App = (() => {
     // const foodSubtotal = prevSubtotal + subtotal;
     // const deliveryCharge = isAddOnRound ? 0 : (HOTEL_CONFIG.deliveryCharge || 0);
     // const grandTotal = foodSubtotal + deliveryCharge;
-    const prevSubtotal = previousOrders.reduce((s, r) => s + r.total, 0);
-    const foodSubtotal = prevSubtotal + subtotal;
-    const deliveryCharge = HOTEL_CONFIG.deliveryCharge || 0; // always the real charge
-    const grandTotal = foodSubtotal + deliveryCharge;        // always include it in total
+
+    // const prevSubtotal = previousOrders.reduce((s, r) => s + r.total, 0);
+    // const foodSubtotal = prevSubtotal + subtotal;
+    // const deliveryCharge = HOTEL_CONFIG.deliveryCharge || 0; // always the real charge
+    // const grandTotal = foodSubtotal + deliveryCharge;        // always include it in total
+    
+    // const deliveryCharge = HOTEL_CONFIG.deliveryCharge || 0;
+    // const grandTotal = foodSubtotal + (isAddOnRound ? 0 : deliveryCharge);
+    // const prevSubtotal   = previousOrders.reduce((s, r) => s + r.total, 0);
+    // const foodSubtotal   = prevSubtotal + subtotal;
+    const prevSubtotal   = previousOrders.reduce((s, r) => s + r.total, 0);
+    const foodSubtotal   = prevSubtotal + subtotal;  // prev totals already include GST
+    const deliveryCharge = HOTEL_CONFIG.deliveryCharge || 0;
+
+    // GST on current round subtotal only
+    const cgstPct = HOTEL_CONFIG.gst?.enabled ? (HOTEL_CONFIG.gst.cgst / 100) : 0;
+    const sgstPct = HOTEL_CONFIG.gst?.enabled ? (HOTEL_CONFIG.gst.sgst / 100) : 0;
+    const cgstAmt = Math.round(subtotal * cgstPct);
+    const sgstAmt = Math.round(subtotal * sgstPct);
+
+    // const grandTotal = foodSubtotal + deliveryCharge + cgstAmt + sgstAmt;
+    const grandTotal = foodSubtotal + (isAddOnRound ? 0 : deliveryCharge) + cgstAmt + sgstAmt;
 
     const subEl         = document.getElementById('deliverySubtotalDisplay');
     const totalEl       = document.getElementById('deliveryGrandTotalDisplay');
@@ -451,13 +627,39 @@ const App = (() => {
 
     // Update food subtotal label to show breakdown if add-on round
     const dtsSubtotalRow = document.querySelector('.delivery-total-summary .dts-row:first-child span:first-child');
+    // if (dtsSubtotalRow) {
+    //   dtsSubtotalRow.textContent = isAddOnRound
+    //     ? `Food Subtotal (${previousOrders.length + 1} rounds)`
+    //     : 'Food Subtotal';
+    // }
     if (dtsSubtotalRow) {
       dtsSubtotalRow.textContent = isAddOnRound
-        ? `Food Subtotal (${previousOrders.length + 1} rounds)`
+        ? `Previous Orders (${previousOrders.length})`
         : 'Food Subtotal';
     }
 
-    if (subEl)   subEl.textContent   = `${currency}${foodSubtotal}`;
+    // if (subEl)   subEl.textContent   = `${currency}${foodSubtotal}`;
+    // if (subEl) subEl.textContent = `${currency}${foodSubtotal}`;
+    if (subEl) subEl.textContent = isAddOnRound 
+              ? `${currency}${prevSubtotal}` 
+              : `${currency}${subtotal}`;
+    // Inject GST rows into delivery summary if not already there
+    const dtsSummary = document.querySelector('.delivery-total-summary');
+    if (dtsSummary && (cgstAmt > 0 || sgstAmt > 0)) {
+      let gstRowId = document.getElementById('dts-gst-rows');
+      if (!gstRowId) {
+        const gstHtml = `<div id="dts-gst-rows">
+          ${cgstAmt > 0 ? `<div class="dts-row"><span>CGST (${HOTEL_CONFIG.gst.cgst}%)</span><span>+ ${currency}${cgstAmt}</span></div>` : ''}
+          ${sgstAmt > 0 ? `<div class="dts-row"><span>SGST (${HOTEL_CONFIG.gst.sgst}%)</span><span>+ ${currency}${sgstAmt}</span></div>` : ''}
+        </div>`;
+        const deliveryRow = dtsSummary.querySelector('.dts-delivery');
+        if (deliveryRow) deliveryRow.insertAdjacentHTML('beforebegin', gstHtml);
+      } else {
+        gstRowId.innerHTML = `
+          ${cgstAmt > 0 ? `<div class="dts-row"><span>CGST (${HOTEL_CONFIG.gst.cgst}%)</span><span>+ ${currency}${cgstAmt}</span></div>` : ''}
+          ${sgstAmt > 0 ? `<div class="dts-row"><span>SGST (${HOTEL_CONFIG.gst.sgst}%)</span><span>+ ${currency}${sgstAmt}</span></div>` : ''}`;
+      }
+    }
     if (totalEl) totalEl.textContent = `${currency}${grandTotal}`;
 
     // if (isAddOnRound) {
@@ -482,13 +684,20 @@ const App = (() => {
       if (badgeEl)  badgeEl.textContent    = '';
 
       if (dtsDeliveryRow)  dtsDeliveryRow.style.display  = '';
-      if (dtsDeliveryLabel) dtsDeliveryLabel.textContent = '🛵 Delivery Charge';
+      // if (dtsDeliveryLabel) dtsDeliveryLabel.textContent = '🛵 Delivery Charge';
+      // if (dtsDeliveryAmt) {
+      //   dtsDeliveryAmt.textContent    = `+ ${currency}${HOTEL_CONFIG.deliveryCharge || 0}`;  // ← show actual charge
+      //   dtsDeliveryAmt.style.color    = '';   // ← reset color
+      //   dtsDeliveryAmt.style.fontSize = '';   // ← reset font size
+      // }
+      // if (totalChargeEl) totalChargeEl.textContent = `+ ${currency}${HOTEL_CONFIG.deliveryCharge || 0}`;  // ← fix this too
+      if (dtsDeliveryLabel) dtsDeliveryLabel.textContent = '🛵 Delivery (charged in Round 1)';
       if (dtsDeliveryAmt) {
-        dtsDeliveryAmt.textContent    = `+ ${currency}${HOTEL_CONFIG.deliveryCharge || 0}`;  // ← show actual charge
-        dtsDeliveryAmt.style.color    = '';   // ← reset color
-        dtsDeliveryAmt.style.fontSize = '';   // ← reset font size
+        dtsDeliveryAmt.textContent    = '✓ included';
+        dtsDeliveryAmt.style.color    = 'var(--text3)';
+        dtsDeliveryAmt.style.fontSize = '12px';
       }
-      if (totalChargeEl) totalChargeEl.textContent = `+ ${currency}${HOTEL_CONFIG.deliveryCharge || 0}`;  // ← fix this too
+      if (totalChargeEl) totalChargeEl.textContent = `✓ included`;
 
     } else {
       // First round — show banner and full delivery charge
@@ -591,8 +800,13 @@ const App = (() => {
     _guest.table = val;
     localStorage.setItem('hotel_guest', JSON.stringify(_guest));
     _updateGuestChip();
-    const notes = (document.getElementById('orderNotes') || {}).value || '';
-    const result = Cart.placeOrder({ type: 'dine-in', name: _guest.name, mobile: _guest.mobile, table: val, notes });
+    // const notes = (document.getElementById('orderNotes') || {}).value || '';
+    // const notes = (document.getElementById('dineNotes') || document.getElementById('orderNotes') || {}).value || '';
+    const notes = (document.getElementById('dineNotes') || {}).value || '';
+    const delivNotes = (document.getElementById('deliveryNotes') || {}).value || '';
+    const finalNotes = notes || delivNotes;
+    // const result = Cart.placeOrder({ type: 'dine-in', name: _guest.name, mobile: _guest.mobile, table: val, notes });
+    const result = Cart.placeOrder({ type: 'dine-in', name: _guest.name, mobile: _guest.mobile, table: val, notes: finalNotes });
     if (result) _afterOrder(result);
   }
 
@@ -604,8 +818,18 @@ const App = (() => {
     if (!name)   { _shakeField(ni); showToast('Enter your name', '⚠️'); return; }
     if (!mobile || mobile.length < 10) { _shakeField(mi); showToast('Enter a valid 10-digit mobile', '⚠️'); return; }
     if (!address) { _shakeField(ai); showToast('Enter your delivery address', '⚠️'); return; }
-    const notes = (document.getElementById('orderNotes') || {}).value || '';
-    const result = Cart.placeOrder({ type: 'delivery', name, mobile, address, notes });
+    // const notes = (document.getElementById('orderNotes') || {}).value || '';
+    // const notes = (document.getElementById('deliveryNotes') || document.getElementById('orderNotes') || {}).value || '';
+    const dineNotes = (document.getElementById('dineNotes') || {}).value || '';
+    const notes = (document.getElementById('deliveryNotes') || {}).value || '';
+    const finalNotes = notes || dineNotes;
+    _guest.name    = name;
+    _guest.mobile  = mobile;
+    _guest.address = address;
+    localStorage.setItem('hotel_guest', JSON.stringify(_guest));
+    _updateGuestChip();
+    // const result = Cart.placeOrder({ type: 'delivery', name, mobile, address, notes });
+    const result = Cart.placeOrder({ type: 'delivery', name, mobile, address, notes: finalNotes });
     if (result) _afterOrder(result);
   }
 
@@ -656,10 +880,17 @@ const App = (() => {
 
   function _afterOrder(result) {
     closeOrderTypeModal();
+    // clear notes after order placed
+    ['dineNotes', 'deliveryNotes', 'orderNotes'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
     const on = document.getElementById('orderNotes');
     if (on) on.value = '';
-
+    _pendingNote = '';
     // Save result to localStorage so refresh can restore it
+    // localStorage.setItem('hotel_last_result', JSON.stringify(result));
+    result.billNo = `#${Date.now().toString().slice(-6)}`;
     localStorage.setItem('hotel_last_result', JSON.stringify(result));
 
     _renderSuccess(result);
@@ -668,36 +899,428 @@ const App = (() => {
   }
 
   function _renderSuccess(result) {
-    const typeEl    = document.getElementById('successType');
-    const tableCard = document.getElementById('successTableCard');
-    const tableEl   = document.getElementById('successTable');
-    const nameCard  = document.getElementById('successNameCard');
-    const nameEl    = document.getElementById('successName');
-    const addrCard  = document.getElementById('successAddrCard');
-    const addrEl    = document.getElementById('successAddr');
-    const roundEl   = document.getElementById('successRound');
 
-    if (typeEl) typeEl.textContent = result.orderType === 'delivery' ? '🛵 Home Delivery' : '🍽️ Dine-In';
-
-    if (result.orderType === 'dine-in') {
-      if (tableCard) tableCard.style.display = 'flex';
-      if (tableEl)   tableEl.textContent     = result.table || '—';
-      if (addrCard)  addrCard.style.display  = 'none';
-    } else {
-      if (tableCard) tableCard.style.display = 'none';
-      if (addrCard)  addrCard.style.display  = 'flex';
-      if (addrEl)    addrEl.textContent      = result.address || '';
+    // Force all CSS animations to replay by re-inserting the inner wrapper
+    const inner = document.querySelector('#success .success-inner');
+    if (inner) {
+      const clone = inner.cloneNode(true);
+      inner.parentNode.replaceChild(clone, inner);
     }
 
-    if (result.name) {
-      if (nameEl)   nameEl.textContent      = result.name;
-      if (nameCard) nameCard.style.display  = 'flex';
-    } else {
-      if (nameCard) nameCard.style.display  = 'none';
+    const currency = HOTEL_CONFIG.currency;
+
+    // Bill number
+    const billNoEl = document.getElementById('successBillNo');
+    const savedResult = localStorage.getItem('hotel_last_result');
+    const billNo = savedResult ? (JSON.parse(savedResult).billNo || '') : '';
+    if (billNoEl) billNoEl.textContent = billNo ? `Bill No: ${billNo}` : '';
+
+    // Order type pill
+    const typeEl = document.getElementById('successType');
+    if (typeEl) {
+      if (result.orderType === 'delivery') {
+        typeEl.textContent = '🛵 Home Delivery';
+      } else {
+        typeEl.textContent = `🍽️ Dine-In  ·  Table ${result.table || '—'}`;
+      }
     }
 
-    if (roundEl) roundEl.style.display = result.orderRound > 1 ? 'block' : 'none';
+    // Success message — different for delivery vs dine-in
+    const msgEl = document.getElementById('successMsg');
+    if (msgEl) {
+      if (result.orderType === 'delivery') {
+        msgEl.innerHTML = `Your order has been sent via WhatsApp.<br/>We'll get it delivered to you soon!`;
+      } else {
+        msgEl.innerHTML = `Your order has been sent via WhatsApp.<br/>We'll start preparing it right away!`;
+      }
+    }
+
+    // Items summary card — pull from last round of previous orders
+    const itemsCard = document.getElementById('successItemsCard');
+    if (itemsCard) {
+      const orders = Cart.getPreviousOrders();
+      if (orders && orders.length > 0) {
+        const lastRound      = orders[orders.length - 1];
+        const isDelivery     = lastRound.orderType === 'delivery';
+        const isFirstRound   = orders.length === 1;
+        const deliveryCharge = (isDelivery && isFirstRound) ? (HOTEL_CONFIG.deliveryCharge || 0) : 0;
+        // const roundTotal     = lastRound.total;
+        // const grandDisplay   = roundTotal;// + deliveryCharge;
+        const cgstPctCheck = HOTEL_CONFIG.gst?.enabled ? (HOTEL_CONFIG.gst.cgst / 100) : 0;
+        const sgstPctCheck = HOTEL_CONFIG.gst?.enabled ? (HOTEL_CONFIG.gst.sgst / 100) : 0;
+        const foodOnlyCheck = lastRound.total - (isDelivery && isFirstRound ? (HOTEL_CONFIG.deliveryCharge || 0) : 0);
+        const cgstAmt = Math.round(foodOnlyCheck * cgstPctCheck);
+        const sgstAmt = Math.round(foodOnlyCheck * sgstPctCheck);
+        const roundTotal   = lastRound.total;
+        const grandDisplay = roundTotal;
+
+        // let html = '<div class="sic-header">Items Ordered</div>';
+        // Build rounds history if more than 1 round
+        let html = '';
+        if (orders.length > 1) {
+          html += '<div class="sic-header">Order Rounds</div>';
+          html += '<div class="sic-items">';
+          orders.forEach((round, index) => {
+            html += `
+              <div class="sic-row">
+                <span class="sic-dot" style="background:transparent;"></span>
+                <span class="sic-name" style="color:var(--text2); font-size:13px;">Round ${index + 1} · ${round.time}</span>
+                <span class="sic-amt" style="font-size:13px;">${currency}${round.total}</span>
+              </div>`;
+          });
+          html += '</div>';
+        }
+
+        // html += '<div class="sic-header">Items Ordered</div>';
+  
+
+        html += '<div class="sic-header">Items Ordered</div>';
+
+        html += '<div class="sic-items">';
+        lastRound.items.forEach(({ item, qty }) => {
+          const dot = item.type === 'veg'
+            ? '<span class="sic-dot veg"></span>'
+            : '<span class="sic-dot nveg"></span>';
+          html += `
+            <div class="sic-row">
+              ${dot}
+              <span class="sic-name">${item.name} × ${qty}</span>
+              <span class="sic-amt">${currency}${item.price * qty}</span>
+            </div>`;
+        });
+        html += '</div>';
+
+
+        // GST rows
+        const cgstPct = HOTEL_CONFIG.gst?.enabled ? (HOTEL_CONFIG.gst.cgst / 100) : 0;
+        const sgstPct = HOTEL_CONFIG.gst?.enabled ? (HOTEL_CONFIG.gst.sgst / 100) : 0;
+        // const foodOnly = lastRound.total - (isDelivery && isFirstRound ? (HOTEL_CONFIG.deliveryCharge || 0) : 0);
+        // const cgst = Math.round(foodOnly * cgstPct);
+        // const sgst = Math.round(foodOnly * sgstPct);
+        // Work backwards: lastRound.total = subtotal + cgst + sgst + delivery
+        // So subtotal = total / (1 + cgstPct + sgstPct)
+        const delivCharge = (isDelivery && isFirstRound) ? (HOTEL_CONFIG.deliveryCharge || 0) : 0;
+        const totalMinusDelivery = lastRound.total - delivCharge;
+        const subtotalOnly = Math.round(totalMinusDelivery / (1 + cgstPct + sgstPct));
+        const cgst = Math.round(subtotalOnly * cgstPct);
+        const sgst = Math.round(subtotalOnly * sgstPct);
+
+        if (cgst > 0) {
+          html += `
+            <div class="sic-row" style="padding: 6px 16px; border-top: 0.5px solid var(--border);">
+              <span class="sic-dot" style="background:transparent;"></span>
+              <span class="sic-name" style="color:var(--text2); font-size:13px;">CGST (${HOTEL_CONFIG.gst.cgst}%)</span>
+              <span class="sic-amt" style="font-size:13px;">+ ${currency}${cgst}</span>
+            </div>`;
+        }
+        if (sgst > 0) {
+          html += `
+            <div class="sic-row" style="padding: 6px 16px; border-top: 0.5px solid var(--border);">
+              <span class="sic-dot" style="background:transparent;"></span>
+              <span class="sic-name" style="color:var(--text2); font-size:13px;">SGST (${HOTEL_CONFIG.gst.sgst}%)</span>
+              <span class="sic-amt" style="font-size:13px;">+ ${currency}${sgst}</span>
+            </div>`;
+        }
+
+        // Delivery charge row — only on first delivery round
+        if (isDelivery && isFirstRound) {
+          html += `
+            <div class="sic-row" style="padding: 8px 16px; border-top: 0.5px solid var(--border);">
+              <span class="sic-dot" style="background:transparent;"></span>
+              <span class="sic-name" style="color:var(--text2); font-size:13px;">🛵 Delivery Charge</span>
+              <span class="sic-amt" style="font-size:13px;">+ ${currency}${deliveryCharge}</span>
+            </div>`;
+        }
+
+        html += `<div class="sic-total"><span>Total</span><span>${currency}${grandDisplay}</span></div>`;
+        itemsCard.innerHTML = html;
+        itemsCard.style.display = 'block';
+      } else {
+        itemsCard.style.display = 'none';
+      }
+    }
+
+    // Round note — only show on round 2+
+    const roundEl = document.getElementById('successRound');
+    if (roundEl) {
+      if (result.orderRound > 1) {
+        roundEl.textContent = `➕ Added to your existing order · Round ${result.orderRound}`;
+        roundEl.style.display = 'block';
+      } else {
+        roundEl.style.display = 'none';
+      }
+    }
+    // Delivery order window timer
+    const timerBlock   = document.getElementById('deliveryTimerBlock');
+    const timerExpired = document.getElementById('deliveryTimerExpired');
+    const addMoreBtn   = document.querySelector('.success-btn-more');
+    const cancelBtn    = document.querySelector('.success-btn-cancel');
+
+    // Clear any existing timer
+    if (window._deliveryTimerInterval) {
+      clearInterval(window._deliveryTimerInterval);
+      window._deliveryTimerInterval = null;
+    }
+
+    if (result.orderType === 'delivery') {
+      const windowMins  = HOTEL_CONFIG.deliveryOrderWindow || 10;
+      const firstTime   = Cart.getFirstOrderTime();
+
+      if (firstTime) {
+        const tick = () => {
+          const remaining = (windowMins * 60 * 1000) - (Date.now() - firstTime);
+
+          // if (remaining <= 0) {
+          //   // Timer expired
+          //   clearInterval(window._deliveryTimerInterval);
+          //   if (timerBlock)   timerBlock.style.display   = 'none';
+          //   if (timerExpired) timerExpired.style.display = 'flex';
+          //   if (addMoreBtn)   addMoreBtn.disabled = true;
+          //   if (addMoreBtn)   addMoreBtn.style.opacity = '0.4';
+          // } 
+          if (remaining <= 0) {
+            clearInterval(window._deliveryTimerInterval);
+            if (timerBlock)   timerBlock.style.display   = 'none';
+            if (timerExpired) timerExpired.style.display = 'flex';
+            if (addMoreBtn)   addMoreBtn.disabled = true;
+            if (addMoreBtn)   addMoreBtn.style.opacity = '0.4';
+            if (cancelBtn)    cancelBtn.disabled = true;
+            if (cancelBtn)    cancelBtn.style.opacity = '0.4';
+            if (cancelBtn)    cancelBtn.style.pointerEvents = 'none';
+          } else {
+            // Show countdown
+            const mins = Math.floor(remaining / 60000);
+            const secs = Math.floor((remaining % 60000) / 1000);
+            const countdown = document.getElementById('deliveryTimerCountdown');
+            if (timerBlock)   timerBlock.style.display   = 'flex';
+            if (timerExpired) timerExpired.style.display = 'none';
+            if (countdown)    countdown.textContent = `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+            if (addMoreBtn)   addMoreBtn.disabled = false;
+            if (addMoreBtn)   addMoreBtn.style.opacity = '';
+          }
+        };
+
+        tick(); // run immediately
+        window._deliveryTimerInterval = setInterval(tick, 1000);
+      }
+    } else {
+      // Dine-in — hide timer elements
+      if (timerBlock)   timerBlock.style.display   = 'none';
+      if (timerExpired) timerExpired.style.display = 'none';
+      if (addMoreBtn)   addMoreBtn.disabled = false;
+      if (addMoreBtn)   addMoreBtn.style.opacity = '';
+    }
   }
+
+  // function _renderSuccess(result) {
+
+  //   // Force restart animations on refresh
+  //   const rings = document.querySelector('.success-rings');
+  //   const checkSvg = document.querySelector('.success-check-svg');
+  //   if (rings) {
+  //     rings.querySelectorAll('.success-ring-pulse').forEach(el => {
+  //       el.style.animation = 'none';
+  //       void el.offsetWidth; // trigger reflow
+  //       el.style.animation = '';
+  //     });
+  //   }
+  //   if (checkSvg) {
+  //     const circle = checkSvg.querySelector('.success-circle');
+  //     const path   = checkSvg.querySelector('.success-check-path');
+  //     [circle, path].forEach(el => {
+  //       if (!el) return;
+  //       el.style.animation = 'none';
+  //       void el.offsetWidth; // trigger reflow
+  //       el.style.animation = '';
+  //     });
+  //   }
+  //   const currency = HOTEL_CONFIG.currency;
+
+  //   // Bill number
+  //   const billNoEl = document.getElementById('successBillNo');
+  //   const savedResult = localStorage.getItem('hotel_last_result');
+  //   const billNo = savedResult ? (JSON.parse(savedResult).billNo || '') : '';
+  //   if (billNoEl) billNoEl.textContent = billNo ? `Bill No: ${billNo}` : '';
+
+  //   // Order type pill
+  //   const typeEl = document.getElementById('successType');
+  //   if (typeEl) {
+  //     if (result.orderType === 'delivery') {
+  //       typeEl.textContent = '🛵 Home Delivery';
+  //     } else {
+  //       typeEl.textContent = `🍽️ Dine-In  ·  Table ${result.table || '—'}`;
+  //     }
+  //   }
+
+  //   // Success message — different for delivery vs dine-in
+  //   const msgEl = document.getElementById('successMsg');
+  //   if (msgEl) {
+  //     if (result.orderType === 'delivery') {
+  //       msgEl.innerHTML = `Your order has been sent via WhatsApp.<br/>We'll get it delivered to you soon!`;
+  //     } else {
+  //       msgEl.innerHTML = `Your order has been sent via WhatsApp.<br/>We'll start preparing it right away!`;
+  //     }
+  //   }
+
+  //   // Items summary card — pull from last round of previous orders
+  //   const itemsCard = document.getElementById('successItemsCard');
+  //   if (itemsCard) {
+  //     const orders = Cart.getPreviousOrders();
+  //     if (orders && orders.length > 0) {
+  //       const lastRound    = orders[orders.length - 1];
+  //       const isDelivery   = lastRound.orderType === 'delivery';
+  //       const isFirstRound = orders.length === 1;
+  //       const deliveryCharge = (isDelivery && isFirstRound) ? (HOTEL_CONFIG.deliveryCharge || 0) : 0;
+  //       const roundTotal   = lastRound.total;
+  //       const grandDisplay = roundTotal + deliveryCharge;
+
+  //       let html = '<div class="sic-header">Items Ordered</div>';
+  //       html += '<div class="sic-items">';
+  //       lastRound.items.forEach(({ item, qty }) => {
+  //         const dot = item.type === 'veg'
+  //           ? '<span class="sic-dot veg"></span>'
+  //           : '<span class="sic-dot nveg"></span>';
+  //         html += `
+  //           <div class="sic-row">
+  //             ${dot}
+  //             <span class="sic-name">${item.name} × ${qty}</span>
+  //             <span class="sic-amt">${currency}${item.price * qty}</span>
+  //           </div>`;
+  //       });
+  //       html += '</div>';
+
+  //       // Delivery charge row — only on first delivery round
+  //       if (isDelivery && isFirstRound) {
+  //         html += `
+  //           <div class="sic-row" style="padding: 8px 16px; border-top: 0.5px solid var(--border);">
+  //             <span class="sic-dot" style="background:transparent;"></span>
+  //             <span class="sic-name" style="color:var(--text2); font-size:13px;">🛵 Delivery Charge</span>
+  //             <span class="sic-amt" style="font-size:13px;">+ ${currency}${deliveryCharge}</span>
+  //           </div>`;
+  //       }
+
+  //       html += `<div class="sic-total"><span>Total</span><span>${currency}${grandDisplay}</span></div>`;
+  //       itemsCard.innerHTML = html;
+  //       itemsCard.style.display = 'block';
+  //     } else {
+  //       itemsCard.style.display = 'none';
+  //     }
+  //   }
+
+  //   // Round note — only show on round 2+
+  //   const roundEl = document.getElementById('successRound');
+  //   if (roundEl) {
+  //     if (result.orderRound > 1) {
+  //       roundEl.textContent = `➕ Added to your existing order · Round ${result.orderRound}`;
+  //       roundEl.style.display = 'block';
+  //     } else {
+  //       roundEl.style.display = 'none';
+  //     }
+  //   }
+  // }
+
+  // function _renderSuccess(result) {
+  //   const typeEl    = document.getElementById('successType');
+  //   const tableCard = document.getElementById('successTableCard');
+  //   const tableEl   = document.getElementById('successTable');
+  //   const nameCard  = document.getElementById('successNameCard');
+  //   const nameEl    = document.getElementById('successName');
+  //   const addrCard  = document.getElementById('successAddrCard');
+  //   const addrEl    = document.getElementById('successAddr');
+  //   const roundEl   = document.getElementById('successRound');
+
+  //   if (typeEl) typeEl.textContent = result.orderType === 'delivery' ? '🛵 Home Delivery' : '🍽️ Dine-In';
+
+  //   if (result.orderType === 'dine-in') {
+  //     if (tableCard) tableCard.style.display = 'flex';
+  //     if (tableEl)   tableEl.textContent     = result.table || '—';
+  //     if (addrCard)  addrCard.style.display  = 'none';
+  //   } else {
+  //     if (tableCard) tableCard.style.display = 'none';
+  //     if (addrCard)  addrCard.style.display  = 'flex';
+  //     if (addrEl)    addrEl.textContent      = result.address || '';
+  //   }
+
+  //   if (result.name) {
+  //     if (nameEl)   nameEl.textContent      = result.name;
+  //     if (nameCard) nameCard.style.display  = 'flex';
+  //   } else {
+  //     if (nameCard) nameCard.style.display  = 'none';
+  //   }
+
+  //   if (roundEl) roundEl.style.display = result.orderRound > 1 ? 'block' : 'none';
+  // }
+
+  // function _renderSuccess(result) {
+  //   const currency = HOTEL_CONFIG.currency;
+
+  //   // Bill number
+  //   const billNoEl = document.getElementById('successBillNo');
+  //   const savedResult = localStorage.getItem('hotel_last_result');
+  //   const billNo = savedResult ? (JSON.parse(savedResult).billNo || '') : '';
+  //   if (billNoEl) billNoEl.textContent = billNo ? `Bill No: ${billNo}` : '';
+
+  //   // Order type pill
+  //   const typeEl = document.getElementById('successType');
+  //   if (typeEl) {
+  //     if (result.orderType === 'delivery') {
+  //       typeEl.textContent = '🛵 Home Delivery';
+  //     } else {
+  //       typeEl.textContent = `🍽️ Dine-In  ·  Table ${result.table || '—'}`;
+  //     }
+  //   }
+
+  //   // Success message — different for delivery vs dine-in
+  //   const msgEl = document.getElementById('successMsg');
+  //   if (msgEl) {
+  //     if (result.orderType === 'delivery') {
+  //       msgEl.innerHTML = `Your order has been sent via WhatsApp.<br/>We'll get it delivered to you soon!`;
+  //     } else {
+  //       msgEl.innerHTML = `Your order has been sent via WhatsApp.<br/>We'll start preparing it right away!`;
+  //     }
+  //   }
+
+  //   // Items summary card — pull from last round of previous orders
+  //   const itemsCard = document.getElementById('successItemsCard');
+  //   if (itemsCard) {
+  //     const orders = Cart.getPreviousOrders();
+  //     if (orders && orders.length > 0) {
+  //       const lastRound = orders[orders.length - 1];
+  //       const roundTotal = lastRound.total;
+
+  //       let html = '<div class="sic-header">Items Ordered</div>';
+  //       html += '<div class="sic-items">';
+  //       lastRound.items.forEach(({ item, qty }) => {
+  //         const dot = item.type === 'veg'
+  //           ? '<span class="sic-dot veg"></span>'
+  //           : '<span class="sic-dot nveg"></span>';
+  //         html += `
+  //           <div class="sic-row">
+  //             ${dot}
+  //             <span class="sic-name">${item.name} × ${qty}</span>
+  //             <span class="sic-amt">${currency}${item.price * qty}</span>
+  //           </div>`;
+  //       });
+  //       html += '</div>';
+  //       html += `<div class="sic-total"><span>Total</span><span>${currency}${roundTotal}</span></div>`;
+  //       itemsCard.innerHTML = html;
+  //       itemsCard.style.display = 'block';
+  //     } else {
+  //       itemsCard.style.display = 'none';
+  //     }
+  //   }
+
+  //   // Round note — only show on round 2+
+  //   const roundEl = document.getElementById('successRound');
+  //   if (roundEl) {
+  //     if (result.orderRound > 1) {
+  //       roundEl.textContent = `➕ Added to your existing order · Round ${result.orderRound}`;
+  //       roundEl.style.display = 'block';
+  //     } else {
+  //       roundEl.style.display = 'none';
+  //     }
+  //   }
+  // }
 
   function placeOrder() { openOrderTypeModal(); }
 
@@ -716,7 +1339,354 @@ const App = (() => {
     closeCart();
     setTimeout(() => _showScreen('bill'), 320);
   }
+  // function openCancelModal() {
+  //   const orders = Cart.getPreviousOrders();
+  //   if (!orders || orders.length === 0) {
+  //     showToast('No orders to cancel', '❌');
+  //     return;
+  //   }
 
+  //   const savedResult  = localStorage.getItem('hotel_last_result');
+  //   const billNo       = savedResult ? (JSON.parse(savedResult).billNo || '') : '';
+  //   const currency     = HOTEL_CONFIG.currency;
+  //   const lastRound    = orders[orders.length - 1];
+  //   const body         = document.getElementById('cancelModalBody');
+  //   if (!body) return;
+
+  //   // Check if within 10 minutes of FIRST order
+  //   const firstOrderTime = Cart.getFirstOrderTime();
+  //   const now            = Date.now();
+  //   // const withinWindow   = firstOrderTime && (now - firstOrderTime) < 10 * 60 * 1000;
+  //   // REPLACE WITH:
+  //   const cancelMins     = HOTEL_CONFIG.cancellationWindow || 10;
+  //   const withinWindow   = firstOrderTime && (now - firstOrderTime) < cancelMins * 60 * 1000;
+  //   const isFirstRound   = orders.length === 1;
+
+  //   const itemNames = lastRound.items.map(i => `${i.item.name} ×${i.qty}`).join(', ');
+
+  //   let html = `<p class="cancel-bill-ref">Bill No: ${billNo}</p>`;
+
+  //   if (isFirstRound && withinWindow) {
+  //     // Round 1 within 10 mins — show full cancel only
+  //     // const minsLeft = Math.ceil((10 * 60 * 1000 - (now - firstOrderTime)) / 60000);
+  //     // REPLACE WITH:
+  //     const minsLeft = Math.ceil((cancelMins * 60 * 1000 - (now - firstOrderTime)) / 60000);
+  //     html += `<p class="cancel-timer-note">⏱ Cancel window closes in ${minsLeft} min</p>`;
+  //     html += `
+  //       <div class="cancel-option" id="cancelFullOrderBtn">
+  //         <div class="cancel-option-label">
+  //           <span class="cancel-icon">🗑️</span>
+  //           <div>
+  //             <div class="cancel-option-title">Cancel Order</div>
+  //             <div class="cancel-option-sub">${itemNames}</div>
+  //             <div class="cancel-option-amt">${currency}${lastRound.total}</div>
+  //           </div>
+  //         </div>
+  //         <span class="cancel-arrow">›</span>
+  //       </div>`;
+
+  //   } else if (isFirstRound && !withinWindow) {
+  //     // Round 1 but 10 mins passed — no cancel allowed
+  //     html += `
+  //       <div class="cancel-expired">
+  //         <div class="cancel-expired-icon">⏰</div>
+  //         <div class="cancel-expired-title">Cancellation Window Closed</div>
+  //         <div class="cancel-expired-sub">Orders can only be cancelled within ${cancelMins} minutes of placing. Please speak to the staff directly.</div>
+  //       </div>`;
+
+  //   } else {
+  //     // Round 2+ — only show last round cancel, no full order cancel
+  //     html += `
+  //       <div class="cancel-option" id="cancelLastRoundBtn">
+  //         <div class="cancel-option-label">
+  //           <span class="cancel-icon">↩️</span>
+  //           <div>
+  //             <div class="cancel-option-title">Cancel Round ${lastRound.round}</div>
+  //             <div class="cancel-option-sub">${itemNames}</div>
+  //             <div class="cancel-option-amt">${currency}${lastRound.total}</div>
+  //           </div>
+  //         </div>
+  //         <span class="cancel-arrow">›</span>
+  //       </div>`;
+  //   }
+
+  //   body.innerHTML = html;
+
+  //   // Attach click handlers
+  //   const lastBtn = document.getElementById('cancelLastRoundBtn');
+  //   const fullBtn = document.getElementById('cancelFullOrderBtn');
+  //   if (lastBtn) lastBtn.addEventListener('click', () => confirmCancel('round', orders.length - 1));
+  //   if (fullBtn) fullBtn.addEventListener('click', () => confirmCancel('full', -1));
+
+  //   document.getElementById('cancelModal').classList.add('show');
+  // }
+
+  // function openCancelModal() {
+  //   const orders = Cart.getPreviousOrders();
+  //   if (!orders || orders.length === 0) {
+  //     showToast('No orders to cancel', '❌');
+  //     return;
+  //   }
+
+  //   const savedResult  = localStorage.getItem('hotel_last_result');
+  //   const billNo       = savedResult ? (JSON.parse(savedResult).billNo || '') : '';
+  //   const currency     = HOTEL_CONFIG.currency;
+  //   const body         = document.getElementById('cancelModalBody');
+  //   if (!body) return;
+
+  //   let html = `<p class="cancel-bill-ref">Bill No: ${billNo}</p>`;
+
+  //   // Full order cancel option
+  //   html += `
+  //     <div class="cancel-option" onclick="App.confirmCancel('full', -1)">
+  //       <div class="cancel-option-label">
+  //         <span class="cancel-icon">🗑️</span>
+  //         <div>
+  //           <div class="cancel-option-title">Cancel Full Order</div>
+  //           <div class="cancel-option-sub">All ${orders.length} round${orders.length > 1 ? 's' : ''} will be cancelled</div>
+  //         </div>
+  //       </div>
+  //       <span class="cancel-arrow">›</span>
+  //     </div>`;
+
+  //   // Individual round cancel options (only if 2+ rounds)
+  //   if (orders.length > 1) {
+  //     html += `<div class="cancel-divider">or cancel a specific round</div>`;
+  //     orders.forEach((round, idx) => {
+  //       const itemNames = round.items.map(i => `${i.item.name} ×${i.qty}`).join(', ');
+  //       html += `
+  //         <div class="cancel-option" onclick="App.confirmCancel('round', ${idx})">
+  //           <div class="cancel-option-label">
+  //             <span class="cancel-icon">↩️</span>
+  //             <div>
+  //               <div class="cancel-option-title">Cancel Round ${round.round}</div>
+  //               <div class="cancel-option-sub">${itemNames}</div>
+  //               <div class="cancel-option-amt">${currency}${round.total}</div>
+  //             </div>
+  //           </div>
+  //           <span class="cancel-arrow">›</span>
+  //         </div>`;
+  //     });
+  //   }
+
+  //   body.innerHTML = html;
+  //   document.getElementById('cancelModal').classList.add('show');
+  // }
+  // function openCancelModal() {
+  //   const orders = Cart.getPreviousOrders();
+  //   if (!orders || orders.length === 0) {
+  //     showToast('No orders to cancel', '❌');
+  //     return;
+  //   }
+
+  //   const savedResult = localStorage.getItem('hotel_last_result');
+  //   const billNo      = savedResult ? (JSON.parse(savedResult).billNo || '') : '';
+  //   const currency    = HOTEL_CONFIG.currency;
+  //   const lastRound   = orders[orders.length - 1];
+  //   const body        = document.getElementById('cancelModalBody');
+  //   if (!body) return;
+
+  //   const itemNames = lastRound.items.map(i => `${i.item.name} ×${i.qty}`).join(', ');
+
+  //   let html = `<p class="cancel-bill-ref">Bill No: ${billNo}</p>`;
+
+  //   // Only show last round
+  //   html += `
+  //     <div class="cancel-option" id="cancelLastRoundBtn">
+  //       <div class="cancel-option-label">
+  //         <span class="cancel-icon">↩️</span>
+  //         <div>
+  //           <div class="cancel-option-title">Cancel Last Order (Round ${lastRound.round})</div>
+  //           <div class="cancel-option-sub">${itemNames}</div>
+  //           <div class="cancel-option-amt">${currency}${lastRound.total}</div>
+  //         </div>
+  //       </div>
+  //       <span class="cancel-arrow">›</span>
+  //     </div>`;
+
+  //   // Full order cancel only if more than 1 round
+  //   if (orders.length > 1) {
+  //     html += `<div class="cancel-divider">or</div>`;
+  //     html += `
+  //       <div class="cancel-option" id="cancelFullOrderBtn">
+  //         <div class="cancel-option-label">
+  //           <span class="cancel-icon">🗑️</span>
+  //           <div>
+  //             <div class="cancel-option-title">Cancel Full Order</div>
+  //             <div class="cancel-option-sub">All ${orders.length} rounds will be cancelled</div>
+  //           </div>
+  //         </div>
+  //         <span class="cancel-arrow">›</span>
+  //       </div>`;
+  //   } else {
+  //     // Only 1 round — just show full cancel
+  //     html = `<p class="cancel-bill-ref">Bill No: ${billNo}</p>`;
+  //     html += `
+  //       <div class="cancel-option" id="cancelFullOrderBtn">
+  //         <div class="cancel-option-label">
+  //           <span class="cancel-icon">🗑️</span>
+  //           <div>
+  //             <div class="cancel-option-title">Cancel Order</div>
+  //             <div class="cancel-option-sub">${itemNames}</div>
+  //             <div class="cancel-option-amt">${currency}${lastRound.total}</div>
+  //           </div>
+  //         </div>
+  //         <span class="cancel-arrow">›</span>
+  //       </div>`;
+  //   }
+
+  //   body.innerHTML = html;
+
+  //   // Attach click handlers directly via JS — no onclick in HTML
+  //   const lastBtn = document.getElementById('cancelLastRoundBtn');
+  //   const fullBtn = document.getElementById('cancelFullOrderBtn');
+  //   if (lastBtn) lastBtn.addEventListener('click', () => confirmCancel('round', orders.length - 1));
+  //   if (fullBtn) fullBtn.addEventListener('click', () => confirmCancel('full', -1));
+
+  //   document.getElementById('cancelModal').classList.add('show');
+  // }
+
+  // FIXED — new openCancelModal using per-round timestamp + Option A logic:
+  function openCancelModal() {
+    const orders = Cart.getPreviousOrders();
+    if (!orders || orders.length === 0) {
+      showToast('No orders to cancel', '❌');
+      return;
+    }
+
+    const savedResult  = localStorage.getItem('hotel_last_result');
+    const billNo       = savedResult ? (JSON.parse(savedResult).billNo || '') : '';
+    const currency     = HOTEL_CONFIG.currency;
+    const lastRound    = orders[orders.length - 1];
+    const body         = document.getElementById('cancelModalBody');
+    if (!body) return;
+
+    // Option A: always check LAST round's own timestamp
+    const cancelMins     = HOTEL_CONFIG.cancellationWindow || 10;
+    const now            = Date.now();
+    const lastRoundTime  = lastRound.timestamp || Cart.getFirstOrderTime();
+    const elapsed        = now - lastRoundTime;
+    const withinWindow   = elapsed < cancelMins * 60 * 1000;
+    const minsLeft       = Math.ceil((cancelMins * 60 * 1000 - elapsed) / 60000);
+
+    const itemNames = lastRound.items.map(i => `${i.item.name} ×${i.qty}`).join(', ');
+    const isFirstRound = orders.length === 1;
+
+    let html = `<p class="cancel-bill-ref">Bill No: ${billNo}</p>`;
+
+    if (withinWindow) {
+      html += `<p class="cancel-timer-note">⏱ Cancel window closes in ${minsLeft} min</p>`;
+      html += `
+        <div class="cancel-option" id="cancelLastRoundBtn">
+          <div class="cancel-option-label">
+            <span class="cancel-icon">${isFirstRound ? '🗑️' : '↩️'}</span>
+            <div>
+              <div class="cancel-option-title">${isFirstRound ? 'Cancel Order' : `Cancel Round ${lastRound.round}`}</div>
+              <div class="cancel-option-sub">${itemNames}</div>
+              <div class="cancel-option-amt">${currency}${lastRound.total}</div>
+            </div>
+          </div>
+          <span class="cancel-arrow">›</span>
+        </div>`;
+    } else {
+      html += `
+        <div class="cancel-expired">
+          <div class="cancel-expired-icon">⏰</div>
+          <div class="cancel-expired-title">Cancellation Window Closed</div>
+          <div class="cancel-expired-sub">Orders can only be cancelled within ${cancelMins} minutes of placing. Please speak to the staff directly.</div>
+        </div>`;
+    }
+
+    body.innerHTML = html;
+
+    // Attach click handler — always cancels last round only (Option A)
+    const lastBtn = document.getElementById('cancelLastRoundBtn');
+    if (lastBtn) lastBtn.addEventListener('click', () => confirmCancel(isFirstRound ? 'full' : 'round', orders.length - 1));
+
+    document.getElementById('cancelModal').classList.add('show');
+  }
+
+  function closeCancelModal() {
+    document.getElementById('cancelModal').classList.remove('show');
+  }
+
+  function confirmCancel(type, roundIndex) {
+    const orders      = Cart.getPreviousOrders();
+    const savedResult = localStorage.getItem('hotel_last_result');
+    const billNo      = savedResult ? (JSON.parse(savedResult).billNo || '') : '';
+    const guest       = Cart.getGuest ? Cart.getGuest() : {};
+    const currency    = HOTEL_CONFIG.currency;
+    const DIV         = '━━━━━━━━━━━━━━━━━━━━';
+
+    let msg = '';
+
+    if (type === 'full') {
+      // Full order cancellation message
+      msg += `❌ *CANCEL ORDER — ${HOTEL_CONFIG.hotelName.toUpperCase()}*\n`;
+      msg += `${DIV}\n`;
+      msg += `🧾 Bill No : ${billNo}\n`;
+      const now  = new Date();
+      const time = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+      const date = now.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+      msg += `📅 ${date} · ${time}\n`;
+      msg += `${DIV}\n`;
+      msg += `*Please cancel my entire order.*\n`;
+      msg += `${DIV}\n`;
+      orders.forEach(round => {
+        msg += `*Round ${round.round}:*\n`;
+        round.items.forEach(({ item, qty }) => {
+          const dot = item.type === 'veg' ? '🟢' : '🔴';
+          msg += `${dot} ${item.name} × ${qty} — ${currency}${item.price * qty}\n`;
+        });
+      });
+      msg += `${DIV}\n`;
+      msg += `_Reason: Customer requested cancellation_\n`;
+
+      // Clear everything from app state
+      Cart.startFreshOrder();
+      localStorage.removeItem('hotel_last_result');
+      localStorage.removeItem('currentPage');
+    } else if (type === 'round') {
+      const round = orders[roundIndex];
+      if (!round) return;
+
+      msg += `↩️ *CANCEL ROUND ${round.round} — ${HOTEL_CONFIG.hotelName.toUpperCase()}*\n`;
+      msg += `${DIV}\n`;
+      msg += `🧾 Bill No : ${billNo}\n`;
+      const now  = new Date();
+      const time = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+      const date = now.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+      msg += `📅 ${date} · ${time}\n`;
+      msg += `${DIV}\n`;
+      msg += `*Please cancel Round ${round.round} items only:*\n`;
+      round.items.forEach(({ item, qty }) => {
+        const dot = item.type === 'veg' ? '🟢' : '🔴';
+        msg += `${dot} ${item.name} × ${qty} — ${currency}${item.price * qty}\n`;
+      });
+      msg += `${DIV}\n`;
+      msg += `Round ${round.round} Total : ${currency}${round.total}\n`;
+      msg += `_Reason: Customer requested cancellation_\n`;
+
+      // Remove that round from state
+      Cart.cancelRound(roundIndex);
+    }
+
+    closeCancelModal();
+    const url = `https://wa.me/${HOTEL_CONFIG.whatsapp}?text=${encodeURIComponent(msg)}`;
+    window.open(url, '_blank');
+    showToast('Cancellation sent via WhatsApp', '↩️');
+
+    // If full cancel — go back to menu
+    if (type === 'full') {
+      setTimeout(() => {
+        _showScreen('welcome');
+      }, 1500);
+    } else {
+      // Re-render success screen with updated totals
+      const updatedResult = JSON.parse(localStorage.getItem('hotel_last_result') || '{}');
+      _renderSuccess(updatedResult);
+    }
+  }
   function _renderBill(orders) {
     const currency = HOTEL_CONFIG.currency;
     const now      = new Date();
@@ -859,12 +1829,22 @@ const App = (() => {
     if (cgstEl)      cgstEl.textContent      = `${currency}${cgst}`;
     if (sgstEl)      sgstEl.textContent      = `${currency}${sgst}`;
 
+    if (cgstRowEl) cgstRowEl.style.display = cgst > 0 ? 'flex' : 'none';
+    if (sgstRowEl) sgstRowEl.style.display = sgst > 0 ? 'flex' : 'none';
+
     if (deliveryRowEl)    deliveryRowEl.style.display   = isDelivery ? 'flex' : 'none';
     if (deliveryChargeEl) deliveryChargeEl.textContent  = `${currency}${deliveryCharge}`;
     if (totalEl)          totalEl.textContent           = `${currency}${grandWithTax}`;
     // Bill number (timestamp-based)
+    // const billNoEl = document.getElementById('billNumber');
+    // if (billNoEl) billNoEl.textContent = `#${Date.now().toString().slice(-6)}`;
+    // Bill number — reuse saved billNo so it stays consistent across refreshes
     const billNoEl = document.getElementById('billNumber');
-    if (billNoEl) billNoEl.textContent = `#${Date.now().toString().slice(-6)}`;
+    if (billNoEl) {
+      const _savedResult = localStorage.getItem('hotel_last_result');
+      const _savedBillNo = _savedResult ? JSON.parse(_savedResult).billNo : null;
+      billNoEl.textContent = _savedBillNo || `#${Date.now().toString().slice(-6)}`;
+    }
   }
 
   /* ═══════════════════════ BILL PDF ══════════════════════════ */
@@ -874,7 +1854,10 @@ const App = (() => {
     const now      = new Date();
     const billTime = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
     const billDate = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-    const billNo   = `#${Date.now().toString().slice(-6)}`;
+    // const billNo   = `#${Date.now().toString().slice(-6)}`;
+    const savedResult = localStorage.getItem('hotel_last_result');
+    const savedBillNo = savedResult ? JSON.parse(savedResult).billNo : null;
+    const billNo = savedBillNo || `#${Date.now().toString().slice(-6)}`;
 
     const allItems = {};
     let grandTotal = 0;
@@ -1182,7 +2165,15 @@ const App = (() => {
 
   function _generatePDF(d, download) {
     const { jsPDF } = window.jspdf;
-    const estimatedH = 150 + (d.items.length * 14) + (d.rounds && d.rounds.length > 1 ? d.rounds.length * 7 : 0) + (d.deliveryAddress ? 12 : 0);
+    // const estimatedH = 150 + (d.items.length * 14) + (d.rounds && d.rounds.length > 1 ? d.rounds.length * 7 : 0) + (d.deliveryAddress ? 12 : 0);
+    const gstRows = (HOTEL_CONFIG.gst?.enabled && HOTEL_CONFIG.gst?.cgst > 0 ? 1 : 0) + (HOTEL_CONFIG.gst?.enabled && HOTEL_CONFIG.gst?.sgst > 0 ? 1 : 0);
+    const estimatedH = 180
+      + (d.items.length * 14)
+      + (d.rounds && d.rounds.length > 1 ? d.rounds.length * 7 : 0)
+      + (d.deliveryAddress ? 15 : 0)
+      + (gstRows * 6)
+      + (d.deliveryCharge ? 6 : 0);
+
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [80, estimatedH] });
     const W = doc.internal.pageSize.getWidth();
     const H = doc.internal.pageSize.getHeight();
@@ -1236,7 +2227,7 @@ const App = (() => {
     fill(0, 0, W, H, 255, 255, 255);
 
     // ── HEADER dark band ──────────────────────────────
-    const HDR_H = 36;
+    const HDR_H = 44;
     fill(0, 0, W, HDR_H, 22, 20, 14);
 
     // three gold decorative lines
@@ -1246,7 +2237,7 @@ const App = (() => {
     doc.setLineWidth(0.25); doc.line(W * 0.25, 7.4, W * 0.75, 7.4);
 
     // fork | plate | knife icon (centred)
-    const ix = W / 2, ib = 14;
+    const ix = W / 2, ib = 16;
     doc.setDrawColor(212, 175, 55); doc.setLineWidth(0.5);
     // plate
     doc.circle(ix, ib, 3.5); fill(ix - 2, ib - 2, 4, 4, 22, 20, 14);
@@ -1259,7 +2250,7 @@ const App = (() => {
     doc.line(ix + 8.2, ib - 4, ix + 8.2, ib - 1);
     doc.line(ix + 7, ib - 1, ix + 8.2, ib - 1);
 
-    y = ib + 7;
+    y = ib + 9;
 
     // hotel name
     doc.setFont('helvetica', 'bold');
@@ -1315,9 +2306,14 @@ const App = (() => {
 
     // ── ITEMS TABLE ───────────────────────────────────
     // column X positions — all right-aligned anchors
+    // const C_NAME = L + 5;   // item name left edge
+    // const C_QTY  = R - 26;  // qty  right anchor
+    // const C_RATE = R - 13;  // rate right anchor
+    // const C_AMT  = R;       // amt  right anchor
+    // const NAME_W = C_QTY - C_NAME - 2;
     const C_NAME = L + 5;   // item name left edge
-    const C_QTY  = R - 26;  // qty  right anchor
-    const C_RATE = R - 13;  // rate right anchor
+    const C_QTY  = R - 28;  // qty  right anchor
+    const C_RATE = R - 14;  // rate right anchor
     const C_AMT  = R;       // amt  right anchor
     const NAME_W = C_QTY - C_NAME - 2;
 
@@ -1385,8 +2381,10 @@ const App = (() => {
     totRow('Sub Total:',  `${c}${foodSub}`);
     // totRow('CGST (5%):', `${c}${cgst}`);
     // totRow('SGST (5%):', `${c}${sgst}`);
-    totRow(`CGST (${HOTEL_CONFIG.gst?.cgst ?? 0}%):`, `${c}${cgst}`);
-    totRow(`SGST (${HOTEL_CONFIG.gst?.sgst ?? 0}%):`, `${c}${sgst}`);
+    // totRow(`CGST (${HOTEL_CONFIG.gst?.cgst ?? 0}%):`, `${c}${cgst}`);
+    // totRow(`SGST (${HOTEL_CONFIG.gst?.sgst ?? 0}%):`, `${c}${sgst}`);
+    if (cgst > 0) totRow(`CGST (${HOTEL_CONFIG.gst?.cgst ?? 0}%):`, `${c}${cgst}`);
+    if (sgst > 0) totRow(`SGST (${HOTEL_CONFIG.gst?.sgst ?? 0}%):`, `${c}${sgst}`); //enable only when we don't want to show 0% gst
     if (d.deliveryCharge) {
       txtL('Delivery:', L, y, 7.5, 'normal', 180, 100, 20);
       txtR(`${c}${d.deliveryCharge}`, R, y, 7.5, 'bold', 180, 100, 20);
@@ -1458,7 +2456,8 @@ const App = (() => {
     localStorage.removeItem('hotel_guest');
     localStorage.removeItem('currentPage');
     localStorage.removeItem('hotel_last_result');  
-    _guest = { name: '', mobile: '', table: '' };
+    // _guest = { name: '', mobile: '', table: '' };
+    _guest = { name: '', mobile: '', table: '', address: '' };
     ['fieldName','fieldMobile'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
     _showScreen('welcome');
   }
@@ -1498,15 +2497,27 @@ const App = (() => {
       ? words.slice(0,-1).join(' ') + ' <span>' + words[words.length-1] + '</span>'
       : words[0] + ' <span>' + words.slice(1).join(' ') + '</span>';
   }
+ 
+  function saveNote(val) {
+    _pendingNote = val;
+    // sync to the other visible textarea too
+    const din = document.getElementById('dineNotes');
+    const dn  = document.getElementById('deliveryNotes');
+    if (din && din.value !== val) din.value = val;
+    if (dn  && dn.value  !== val) dn.value  = val;
+  }
 
   return {
     boot, enterMenu, goBackToMenu, goBackToMenuFromBill, startFreshOrder,
     openCart, closeCart, placeOrder,
     openOrderTypeModal, closeOrderTypeModal,
     selectOrderType, confirmDineIn, confirmDelivery,
+     backToOrderTypeChoice,   // ← add this
     showOrderStep: _showOrderStep,   // ← ADD THIS
     generateBill, downloadBillPDF, shareBillWhatsApp, closeBillAndReset,
     toggleTheme, showToast, renderHotelName,
+    saveNote,   // ← add this
+    openCancelModal, closeCancelModal, confirmCancel,
   };
 })();
 

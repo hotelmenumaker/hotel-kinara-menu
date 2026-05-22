@@ -8,6 +8,7 @@ const Cart = (() => {
   let _cart = JSON.parse(localStorage.getItem('hotel_cart') || '{}');
   let _orderRound = parseInt(localStorage.getItem('hotel_order_round') || '1');
   let _previousOrders = JSON.parse(localStorage.getItem('hotel_previous_orders') || '[]');
+  let _firstOrderTime = parseInt(localStorage.getItem('hotel_first_order_time') || '0') || null;  // ← add this line
 
   // Re-sync UI on page load if previous orders exist (e.g. after a page refresh)
   document.addEventListener('DOMContentLoaded', function () {
@@ -104,6 +105,7 @@ const Cart = (() => {
     localStorage.setItem('hotel_cart', JSON.stringify(_cart));
     localStorage.setItem('hotel_order_round', _orderRound);
     localStorage.setItem('hotel_previous_orders', JSON.stringify(_previousOrders));
+    localStorage.setItem('hotel_first_order_time', _firstOrderTime || '');
   }
 
   function _sync(id) {
@@ -141,11 +143,21 @@ const Cart = (() => {
       }
       document.getElementById('barCount').textContent  = `${count} item${count > 1 ? 's' : ''}`;
       // document.getElementById('barAmount').textContent = `${HOTEL_CONFIG.currency}${total}`;
-      const _prevSum = _previousOrders.reduce((s, r) => s + r.total, 0);
-      const _isDelivery = _previousOrders[0] && _previousOrders[0].orderType === 'delivery';
-      const _dc = _isDelivery ? (HOTEL_CONFIG.deliveryCharge || 0) : 0;
-      const _grandBar = _prevSum + subtotal + _dc;
-      document.getElementById('barAmount').textContent = `${HOTEL_CONFIG.currency}${_previousOrders.length > 0 ? _grandBar : total}`;
+      // const _prevSum = _previousOrders.reduce((s, r) => s + r.total, 0);
+      // const _isDelivery = _previousOrders[0] && _previousOrders[0].orderType === 'delivery';
+      // const _dc = _isDelivery ? (HOTEL_CONFIG.deliveryCharge || 0) : 0;
+      // const _grandBar = _prevSum + subtotal + _dc;
+      // document.getElementById('barAmount').textContent = `${HOTEL_CONFIG.currency}${_previousOrders.length > 0 ? _grandBar : total}`;
+      // FIXED CODE:
+      // const _prevSum = _previousOrders.reduce((s, r) => s + r.total, 0);
+      // const _isDelivery = _previousOrders[0] && _previousOrders[0].orderType === 'delivery';
+      // const _dc = (_isDelivery && _previousOrders.length === 0) ? (HOTEL_CONFIG.deliveryCharge || 0) : 0;
+      // const _cgst = Math.round(subtotal * (HOTEL_CONFIG.cgst || 0));
+      // const _sgst = Math.round(subtotal * (HOTEL_CONFIG.sgst || 0));
+      // const _grandBar = _prevSum + subtotal + _cgst + _sgst + _dc;
+      // document.getElementById('barAmount').textContent = `${HOTEL_CONFIG.currency}${_previousOrders.length > 0 ? _grandBar : total}`;
+      // FIXED — show only current items subtotal (no prev orders, no tax):
+      document.getElementById('barAmount').textContent = `${HOTEL_CONFIG.currency}${subtotal}`;
     } else {
       if (countEl) countEl.classList.remove('show');
       if (_previousOrders.length > 0 && !hiddenScreens.includes(activeId)) {
@@ -298,17 +310,26 @@ const Cart = (() => {
 
     const firstOrder = _previousOrders[0];
     const isDelivery = firstOrder && firstOrder.orderType === 'delivery';
+    // const deliveryCharge = isDelivery ? (HOTEL_CONFIG.deliveryCharge || 0) : 0;
+    // const prevTotal = _previousOrders.reduce((s, r) => s + r.total, 0);
+    // const grandTotal = prevTotal + subtotal + deliveryCharge;
     const deliveryCharge = isDelivery ? (HOTEL_CONFIG.deliveryCharge || 0) : 0;
     const prevTotal = _previousOrders.reduce((s, r) => s + r.total, 0);
-    const grandTotal = prevTotal + subtotal + deliveryCharge;
+    const isAddOnRound = _previousOrders.length > 0;
+    const grandTotal = prevTotal + subtotal + (isAddOnRound ? 0 : deliveryCharge);
 
+    // const totalElement = document.getElementById('drawerTotal');
+    // if (totalElement) {
+    //   if (_previousOrders.length > 0) {
+    //     totalElement.innerHTML = `<strong>${currency}${grandTotal}</strong>`;
+    //   } else {
+    //     totalElement.innerHTML = `${currency}${total}`;
+    //   }
+    // }
+    // FIXED — always show only current cart subtotal in the TOTAL row:
     const totalElement = document.getElementById('drawerTotal');
     if (totalElement) {
-      if (_previousOrders.length > 0) {
-        totalElement.innerHTML = `<strong>${currency}${grandTotal}</strong>`;
-      } else {
-        totalElement.innerHTML = `${currency}${total}`;
-      }
+      totalElement.innerHTML = `${currency}${subtotal}`;
     }
 
     // Round-by-round breakdown
@@ -326,11 +347,46 @@ const Cart = (() => {
           bHtml += `<div class="drb-row drb-current"><span class="drb-label">🛒 Order ${_orderRound} · Now</span><span class="drb-amt">${currency}${subtotal}</span></div>`;
         }
 
-        if (isDelivery) {
-          bHtml += `<div class="drb-row drb-delivery"><span class="drb-label">🛵 Delivery Charge</span><span class="drb-amt">${currency}${deliveryCharge}</span></div>`;
+        // if (isDelivery) {
+        //   bHtml += `<div class="drb-row drb-delivery"><span class="drb-label">🛵 Delivery Charge</span><span class="drb-amt">${currency}${deliveryCharge}</span></div>`;
+        // }
+
+        // bHtml += `<div class="drb-row drb-grand"><span class="drb-label">Grand Total</span><span class="drb-amt">${currency}${grandTotal}</span></div>`;
+        // GST on current round items
+        const cgstPct = HOTEL_CONFIG.gst?.enabled ? (HOTEL_CONFIG.gst.cgst / 100) : 0;
+        const sgstPct = HOTEL_CONFIG.gst?.enabled ? (HOTEL_CONFIG.gst.sgst / 100) : 0;
+        const cgstAmt = Math.round(subtotal * cgstPct);
+        const sgstAmt = Math.round(subtotal * sgstPct);
+
+        // if (cgstAmt > 0) {
+        //   bHtml += `<div class="drb-row"><span class="drb-label">CGST (${HOTEL_CONFIG.gst.cgst}%)</span><span class="drb-amt">+ ${currency}${cgstAmt}</span></div>`;
+        // }
+        // if (sgstAmt > 0) {
+        //   bHtml += `<div class="drb-row"><span class="drb-label">SGST (${HOTEL_CONFIG.gst.sgst}%)</span><span class="drb-amt">+ ${currency}${sgstAmt}</span></div>`;
+        // }
+
+        if (subtotal > 0 && cgstAmt > 0) {
+          bHtml += `<div class="drb-row"><span class="drb-label">CGST (${HOTEL_CONFIG.gst.cgst}%)</span><span class="drb-amt">+ ${currency}${cgstAmt}</span></div>`;
+        }
+        if (subtotal > 0 && sgstAmt > 0) {
+          bHtml += `<div class="drb-row"><span class="drb-label">SGST (${HOTEL_CONFIG.gst.sgst}%)</span><span class="drb-amt">+ ${currency}${sgstAmt}</span></div>`;
         }
 
-        bHtml += `<div class="drb-row drb-grand"><span class="drb-label">Grand Total</span><span class="drb-amt">${currency}${grandTotal}</span></div>`;
+        // if (isDelivery) {
+        //   bHtml += `<div class="drb-row drb-delivery"><span class="drb-label">🛵 Delivery Charge</span><span class="drb-amt">${currency}${deliveryCharge}</span></div>`;
+        // }
+        // if (isDelivery && !isAddOnRound) {
+        //   bHtml += `<div class="drb-row drb-delivery"><span class="drb-label">🛵 Delivery Charge</span><span class="drb-amt">${currency}${deliveryCharge}</span></div>`;
+        // }
+        if (isDelivery) {
+          const delivLabel = isAddOnRound ? '🛵 Delivery (charged in Round 1)' : '🛵 Delivery Charge';
+          const delivAmt   = isAddOnRound ? '✓ included' : `${currency}${deliveryCharge}`;
+          bHtml += `<div class="drb-row drb-delivery"><span class="drb-label">${delivLabel}</span><span class="drb-amt" style="${isAddOnRound ? 'color:var(--text3);font-size:12px' : ''}">${delivAmt}</span></div>`;
+        }
+        // bHtml += `<div class="drb-row drb-grand"><span class="drb-label">Grand Total</span><span class="drb-amt">${currency}${grandTotal + cgstAmt + sgstAmt}</span></div>`;
+        // bHtml += `<div class="drb-row drb-grand"><span class="drb-label">Grand Total</span><span class="drb-amt">${currency}${grandTotal + (subtotal > 0 ? cgstAmt + sgstAmt : 0)}</span></div>`;
+        bHtml += `<div class="drb-row drb-grand"><span class="drb-label">Grand Total</span><span class="drb-amt">${currency}${grandTotal + (subtotal > 0 ? cgstAmt + sgstAmt : 0)}</span></div>`;
+
         breakdown.innerHTML = bHtml;
       } else {
         breakdown.style.display = 'none';
@@ -412,101 +468,118 @@ const Cart = (() => {
   function placeOrder(orderInfo) {
     const { entries, count, subtotal } = getTotals();
     if (count === 0) { App.showToast('Please add items first'); return null; }
+    if (_previousOrders.length === 0) _firstOrderTime = Date.now();  
 
-    const currency = HOTEL_CONFIG.currency;
-    const now      = new Date();
-    const time     = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-    const date     = now.toLocaleDateString('en-IN');
-    const day      = now.toLocaleDateString('en-IN', { weekday: 'long' });
-    const isAddOn  = _previousOrders.length > 0;
+    const currency   = HOTEL_CONFIG.currency;
+    const now        = new Date();
+    const time       = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+    const date       = now.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+    const isAddOn    = _previousOrders.length > 0;
     const isDelivery = orderInfo.type === 'delivery';
-    // const deliveryCharge = isDelivery ? 40 : 0;
     const deliveryCharge = isDelivery ? (HOTEL_CONFIG.deliveryCharge || 0) : 0;
-    const orderTotal = subtotal; // ← store food-only total per round
 
-    let msg = '';
-    if (isAddOn) {
-      msg += `➕ *Additional Order (Round ${_orderRound}) — ${HOTEL_CONFIG.hotelName}*\n`;
-    } else {
-      msg += `🍽️ *New Order — ${HOTEL_CONFIG.hotelName}*\n`;
-    }
-    msg += `──────────────────\n`;
-
-    if (orderInfo.type === 'dine-in') {
-      msg += `🏠 *Order Type:* Dine-In\n`;
-      msg += `📍 *Table No:* ${orderInfo.table}\n`;
-    } else {
-      msg += `🛵 *Order Type:* Home Delivery\n`;
-    }
-
-    if (orderInfo.name)   msg += `👤 *Name:* ${orderInfo.name}\n`;
-    if (orderInfo.mobile) msg += `📱 *Mobile:* ${orderInfo.mobile}\n`;
-
-    if (orderInfo.type === 'delivery' && orderInfo.address) {
-      msg += `🏡 *Delivery Address:*\n${orderInfo.address}\n`;
-    }
-
-    msg += `📅 *Day:* ${day}\n`;
-    msg += `📆 *Date:* ${date}\n`;
-    msg += `🕐 *Time:* ${time}\n`;
-    msg += `──────────────────\n`;
-    msg += `*ORDER DETAILS:*\n\n`;
-
-    entries.forEach(({ item, qty }) => {
-      const dot = item.type === 'veg' ? '🟢' : '🔴';
-      msg += `${dot} ${item.name} × ${qty}  —  ${currency}${item.price * qty}\n`;
-    });
-
-    // msg += `──────────────────\n`;
-
-    // if (isDelivery) {
-    //   msg += `🛵 Delivery Charges: ${currency}${deliveryCharge}\n`;
-    // }
-
-    // msg += `*TOTAL: ${currency}${orderTotal}*\n`;
-    msg += `──────────────────\n`;
-
+    // GST calculation (on food subtotal only)
     const cgstPct = HOTEL_CONFIG.gst?.enabled ? (HOTEL_CONFIG.gst.cgst / 100) : 0;
     const sgstPct = HOTEL_CONFIG.gst?.enabled ? (HOTEL_CONFIG.gst.sgst / 100) : 0;
     const cgst    = Math.round(subtotal * cgstPct);
     const sgst    = Math.round(subtotal * sgstPct);
-    // const taxedTotal = subtotal + cgst + sgst + (isDelivery ? deliveryCharge : 0);
-    const taxedTotal = subtotal + cgst + sgst + (isDelivery && !isAddOn ? deliveryCharge : 0);
+    const thisRoundTotal = subtotal + cgst + sgst + (isDelivery && !isAddOn ? deliveryCharge : 0);
 
-    if (cgst > 0) msg += `CGST (${HOTEL_CONFIG.gst.cgst}%): ${currency}${cgst}\n`;
-    if (sgst > 0) msg += `SGST (${HOTEL_CONFIG.gst.sgst}%): ${currency}${sgst}\n`;
+    // Running grand total across all rounds
+    const prevGrandTotal = _previousOrders.reduce((s, r) => s + r.total, 0);
+    const grandTotal     = prevGrandTotal + thisRoundTotal;
 
-    // BEFORE (~line 299-301):
-    // if (isDelivery) {
-    //   msg += `🛵 Delivery Charges: ${currency}${deliveryCharge}\n`;
-    // }
+    // Bill number — reuse from saved result if exists
+    const savedResult = localStorage.getItem('hotel_last_result');
+    const billNo      = savedResult ? (JSON.parse(savedResult).billNo || `#${Date.now().toString().slice(-6)}`) : `#${Date.now().toString().slice(-6)}`;
 
-    // AFTER:
-    // if (isDelivery && !isAddOn) {   // ← only show on first round
-    //   msg += `🛵 Delivery Charges: ${currency}${deliveryCharge}\n`;
-    // }
+    const DIV = '━━━━━━━━━━━━━━━━━━━━';
 
-    // msg += `*TOTAL: ${currency}${taxedTotal}*\n`;
+    let msg = '';
 
-    if (cgst > 0) msg += `CGST (${HOTEL_CONFIG.gst.cgst}%): ${currency}${cgst}\n`;
-    if (sgst > 0) msg += `SGST (${HOTEL_CONFIG.gst.sgst}%): ${currency}${sgst}\n`;
-    if (isDelivery && !isAddOn) {
-      msg += `🛵 Delivery Charges: ${currency}${deliveryCharge}\n`;
+    // ── HEADER ──
+    if (isAddOn) {
+      msg += `➕ *ADDITIONAL ORDER (ROUND ${_orderRound}) — ${HOTEL_CONFIG.hotelName.toUpperCase()}*\n`;
+    } else {
+      msg += `🍽️ *NEW ORDER — ${HOTEL_CONFIG.hotelName.toUpperCase()}*\n`;
+    }
+    msg += `${DIV}\n`;
+    msg += `🧾 Bill No : ${billNo}\n`;
+    msg += `📅 ${date} · ${time}\n`;
+    msg += `${DIV}\n`;
+
+    // ── ORDER TYPE + GUEST INFO ──
+    if (isDelivery) {
+      msg += `🛵 Home Delivery\n`;
+      if (orderInfo.name)    msg += `👤 ${orderInfo.name}`;
+      if (orderInfo.mobile)  msg += `  |  📱 ${orderInfo.mobile}`;
+      if (orderInfo.name || orderInfo.mobile) msg += `\n`;
+      if (orderInfo.address) msg += `🏡 ${orderInfo.address}\n`;
+    } else {
+      msg += `🪑 Dine-In  |  Table: ${orderInfo.table}\n`;
+      if (orderInfo.name)   msg += `👤 ${orderInfo.name}`;
+      if (orderInfo.mobile) msg += `  |  📱 ${orderInfo.mobile}`;
+      if (orderInfo.name || orderInfo.mobile) msg += `\n`;
+    }
+    msg += `${DIV}\n`;
+
+    // ── ITEMS ──
+    msg += `*ITEMS*\n`;
+    entries.forEach(({ item, qty }) => {
+      const dot   = item.type === 'veg' ? '🟢' : '🔴';
+      const name  = `${dot} ${item.name} × ${qty}`;
+      const amt   = `${currency}${item.price * qty}`;
+      // dot leaders for alignment
+      const dots  = '.'.repeat(Math.max(2, 32 - name.length));
+      msg += `${name} ${dots} ${amt}\n`;
+    });
+    msg += `${DIV}\n`;
+
+    // ── TOTALS ──
+    if (isAddOn) {
+      // Round 2+ — show breakdown
+      msg += `This Round  : ${currency}${subtotal}\n`;
+      if (cgst > 0) msg += `CGST (${HOTEL_CONFIG.gst.cgst}%) : ${currency}${cgst}\n`;
+      if (sgst > 0) msg += `SGST (${HOTEL_CONFIG.gst.sgst}%) : ${currency}${sgst}\n`;
+      msg += `Previous    : ${currency}${prevGrandTotal}\n`;
+      msg += `${DIV}\n`;
+      msg += `💰 *GRAND TOTAL: ${currency}${grandTotal}*\n`;
+    } else {
+      // Round 1
+      msg += `Subtotal    : ${currency}${subtotal}\n`;
+      if (cgst > 0) msg += `CGST (${HOTEL_CONFIG.gst.cgst}%) : ${currency}${cgst}\n`;
+      if (sgst > 0) msg += `SGST (${HOTEL_CONFIG.gst.sgst}%) : ${currency}${sgst}\n`;
+      if (isDelivery) msg += `🛵 Delivery  : ${currency}${deliveryCharge}\n`;
+      msg += `${DIV}\n`;
+      msg += `💰 *TOTAL: ${currency}${thisRoundTotal}*\n`;
     }
 
-    msg += `*TOTAL: ${currency}${taxedTotal}*\n`;
-
+    // ── NOTES ──
     if (orderInfo.notes && orderInfo.notes.trim()) {
-      msg += `\n📝 *Note:* ${orderInfo.notes.trim()}\n`;
+      msg += `${DIV}\n`;
+      msg += `📝 ${orderInfo.notes.trim()}\n`;
     }
 
-    msg += `\n_Sent via QR Menu_`;
+    // ── SAVE + SEND ──
+    // _previousOrders.push({
+    //   round:     _orderRound,
+    //   orderType: orderInfo.type,
+    //   items:     entries.map(e => ({ item: e.item, qty: e.qty })),
+    //   total:     thisRoundTotal,
+    //   time, date,
+    //   name:    orderInfo.name    || null,
+    //   table:   orderInfo.table   || null,
+    //   address: orderInfo.address || null,
+    // });
 
+    // FIXED — add timestamp:
     _previousOrders.push({
-      round: _orderRound,
+      round:     _orderRound,
       orderType: orderInfo.type,
-      items: entries.map(e => ({ item: e.item, qty: e.qty })),
-      total: subtotal, time, date, day,
+      items:     entries.map(e => ({ item: e.item, qty: e.qty })),
+      total:     thisRoundTotal,
+      time, date,
+      timestamp: Date.now(),
       name:    orderInfo.name    || null,
       table:   orderInfo.table   || null,
       address: orderInfo.address || null,
@@ -519,13 +592,130 @@ const Cart = (() => {
     clear();
 
     return {
-      orderType: orderInfo.type,
-      table: orderInfo.table || null,
-      address: orderInfo.address || null,
-      name: orderInfo.name || null,
+      orderType:  orderInfo.type,
+      table:      orderInfo.table   || null,
+      address:    orderInfo.address || null,
+      name:       orderInfo.name    || null,
       orderRound: _orderRound - 1,
     };
   }
+  // function placeOrder(orderInfo) {
+  //   const { entries, count, subtotal } = getTotals();
+  //   if (count === 0) { App.showToast('Please add items first'); return null; }
+
+  //   const currency = HOTEL_CONFIG.currency;
+  //   const now      = new Date();
+  //   const time     = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+  //   const date     = now.toLocaleDateString('en-IN');
+  //   const day      = now.toLocaleDateString('en-IN', { weekday: 'long' });
+  //   const isAddOn  = _previousOrders.length > 0;
+  //   const isDelivery = orderInfo.type === 'delivery';
+  //   // const deliveryCharge = isDelivery ? 40 : 0;
+  //   const deliveryCharge = isDelivery ? (HOTEL_CONFIG.deliveryCharge || 0) : 0;
+  //   const orderTotal = subtotal; // ← store food-only total per round
+
+  //   let msg = '';
+  //   if (isAddOn) {
+  //     msg += `➕ *Additional Order (Round ${_orderRound}) — ${HOTEL_CONFIG.hotelName}*\n`;
+  //   } else {
+  //     msg += `🍽️ *New Order — ${HOTEL_CONFIG.hotelName}*\n`;
+  //   }
+  //   msg += `──────────────────\n`;
+
+  //   if (orderInfo.type === 'dine-in') {
+  //     msg += `🏠 *Order Type:* Dine-In\n`;
+  //     msg += `📍 *Table No:* ${orderInfo.table}\n`;
+  //   } else {
+  //     msg += `🛵 *Order Type:* Home Delivery\n`;
+  //   }
+
+  //   if (orderInfo.name)   msg += `👤 *Name:* ${orderInfo.name}\n`;
+  //   if (orderInfo.mobile) msg += `📱 *Mobile:* ${orderInfo.mobile}\n`;
+
+  //   if (orderInfo.type === 'delivery' && orderInfo.address) {
+  //     msg += `🏡 *Delivery Address:*\n${orderInfo.address}\n`;
+  //   }
+
+  //   msg += `📅 *Day:* ${day}\n`;
+  //   msg += `📆 *Date:* ${date}\n`;
+  //   msg += `🕐 *Time:* ${time}\n`;
+  //   msg += `──────────────────\n`;
+  //   msg += `*ORDER DETAILS:*\n\n`;
+
+  //   entries.forEach(({ item, qty }) => {
+  //     const dot = item.type === 'veg' ? '🟢' : '🔴';
+  //     msg += `${dot} ${item.name} × ${qty}  —  ${currency}${item.price * qty}\n`;
+  //   });
+
+  //   // msg += `──────────────────\n`;
+
+  //   // if (isDelivery) {
+  //   //   msg += `🛵 Delivery Charges: ${currency}${deliveryCharge}\n`;
+  //   // }
+
+  //   // msg += `*TOTAL: ${currency}${orderTotal}*\n`;
+  //   msg += `──────────────────\n`;
+
+  //   const cgstPct = HOTEL_CONFIG.gst?.enabled ? (HOTEL_CONFIG.gst.cgst / 100) : 0;
+  //   const sgstPct = HOTEL_CONFIG.gst?.enabled ? (HOTEL_CONFIG.gst.sgst / 100) : 0;
+  //   const cgst    = Math.round(subtotal * cgstPct);
+  //   const sgst    = Math.round(subtotal * sgstPct);
+  //   // const taxedTotal = subtotal + cgst + sgst + (isDelivery ? deliveryCharge : 0);
+  //   const taxedTotal = subtotal + cgst + sgst + (isDelivery && !isAddOn ? deliveryCharge : 0);
+
+  //   // if (cgst > 0) msg += `CGST (${HOTEL_CONFIG.gst.cgst}%): ${currency}${cgst}\n`;
+  //   // if (sgst > 0) msg += `SGST (${HOTEL_CONFIG.gst.sgst}%): ${currency}${sgst}\n`;
+
+  //   // BEFORE (~line 299-301):
+  //   // if (isDelivery) {
+  //   //   msg += `🛵 Delivery Charges: ${currency}${deliveryCharge}\n`;
+  //   // }
+
+  //   // AFTER:
+  //   // if (isDelivery && !isAddOn) {   // ← only show on first round
+  //   //   msg += `🛵 Delivery Charges: ${currency}${deliveryCharge}\n`;
+  //   // }
+
+  //   // msg += `*TOTAL: ${currency}${taxedTotal}*\n`;
+
+  //   if (cgst > 0) msg += `CGST (${HOTEL_CONFIG.gst.cgst}%): ${currency}${cgst}\n`;
+  //   if (sgst > 0) msg += `SGST (${HOTEL_CONFIG.gst.sgst}%): ${currency}${sgst}\n`;
+  //   if (isDelivery && !isAddOn) {
+  //     msg += `🛵 Delivery Charges: ${currency}${deliveryCharge}\n`;
+  //   }
+
+  //   msg += `*TOTAL: ${currency}${taxedTotal}*\n`;
+
+  //   if (orderInfo.notes && orderInfo.notes.trim()) {
+  //     msg += `\n📝 *Note:* ${orderInfo.notes.trim()}\n`;
+  //   }
+
+  //   msg += `\n_Sent via QR Menu_`;
+
+  //   _previousOrders.push({
+  //     round: _orderRound,
+  //     orderType: orderInfo.type,
+  //     items: entries.map(e => ({ item: e.item, qty: e.qty })),
+  //     total: subtotal, time, date, day,
+  //     name:    orderInfo.name    || null,
+  //     table:   orderInfo.table   || null,
+  //     address: orderInfo.address || null,
+  //   });
+  //   _orderRound++;
+  //   _persist();
+
+  //   const url = `https://wa.me/${HOTEL_CONFIG.whatsapp}?text=${encodeURIComponent(msg)}`;
+  //   window.open(url, '_blank');
+  //   clear();
+
+  //   return {
+  //     orderType: orderInfo.type,
+  //     table: orderInfo.table || null,
+  //     address: orderInfo.address || null,
+  //     name: orderInfo.name || null,
+  //     orderRound: _orderRound - 1,
+  //   };
+  // }
 
   // function placeOrder(orderInfo) {
   //   const { entries, count, subtotal } = getTotals();
@@ -635,18 +825,30 @@ const Cart = (() => {
     _cart = {};
     _previousOrders = [];
     _orderRound = 1;
+    _firstOrderTime = null;  
     localStorage.removeItem('hotel_cart');
     localStorage.removeItem('hotel_previous_orders');
     localStorage.removeItem('hotel_order_round');
+    localStorage.removeItem('hotel_first_order_time');
     _updateUI();
   }
-
+  function cancelRound(roundIndex) {
+    if (roundIndex < 0 || roundIndex >= _previousOrders.length) return;
+    _previousOrders.splice(roundIndex, 1);
+    // Recalculate round numbers
+    _previousOrders.forEach((o, i) => { o.round = i + 1; });
+    _orderRound = _previousOrders.length + 1;
+    _persist();
+  }
+  function getFirstOrderTime() {
+    return _firstOrderTime || null;
+  }
   return {
     getQty, getTotals, isEmpty,
-    getOrderRound, getPreviousOrders,
+    getOrderRound, getPreviousOrders,getFirstOrderTime,
     add, increase, decrease, clear,
     renderDrawer, drawerIncrease, drawerDecrease,
-    placeOrder, startFreshOrder,
+    placeOrder, startFreshOrder,cancelRound,
   };
 })();
 

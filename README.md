@@ -2,34 +2,35 @@
 ### Mobile-first digital menu with WhatsApp ordering
 
 Zero app install needed. Guest scans a QR → browses → orders via WhatsApp.
-Version : 3.3
+**Version: 4.1**
 
 ---
 
 ## 📁 COMPLETE FOLDER STRUCTURE
 
 ```
-hotel-menu/
+Hotel_V4.1/
 │
-├── index.html                 ← The entire app (open in browser)
+├── index.html                        ← The entire app (open in browser)
 │
 ├── css/
-│   └── style.css              ← All styles (CSS variables for theming)
+│   └── style.css                     ← All styles (CSS variables for theming)
 │
 ├── js/
-│   ├── config.js              ← ✏️  EDIT THIS for each hotel
-│   ├── app.js                 ← App controller (screens, form, drawer)
-│   ├── menu.js                ← Menu rendering engine
-│   └── cart.js                ← Cart engine + WhatsApp order builder
+│   ├── config.js                     ← ✏️  EDIT THIS for each hotel (URL images)
+│   ├── config_with_local_image.js    ← ✏️  Alternative config using local image files
+│   ├── app.js                        ← App controller (screens, form, drawer)
+│   ├── menu.js                       ← Menu rendering engine
+│   └── cart.js                       ← Cart engine + WhatsApp order builder
 │
 └── images/
-    ├── banner.jpg             ← ✏️  Welcome screen background (portrait ~800×1200px)
-    ├── menu-hero.jpg          ← ✏️  Menu page top strip (landscape ~1200×400px)
-    ├── logo.png               ← ✏️  Hotel logo in header (transparent PNG ~200×80px)
-    ├── favicon.png            ← ✏️  Browser tab icon (64×64px)
+    ├── banner.jpg                    ← ✏️  Welcome screen background (portrait ~800×1200px)
+    ├── menu-hero.jpg                 ← ✏️  Menu page top strip (landscape ~1200×400px)
+    ├── logo.png                      ← ✏️  Hotel logo in header (transparent PNG ~200×80px)
+    ├── favicon.png                   ← ✏️  Browser tab icon (64×64px)
     └── menu/
-        ├── placeholder.jpg    ← Auto-shown when a food image is missing
-        ├── paneer-tikka.jpg   ← ✏️  One file per menu item
+        ├── placeholder.jpg           ← Auto-shown when a food image is missing
+        ├── paneer-tikka.jpg          ← ✏️  One file per menu item
         ├── butter-chicken.jpg
         └── … (add all your food photos here)
 ```
@@ -54,6 +55,7 @@ hotel-menu/
 
 ### Step 2 — Edit `js/config.js` (the ONLY file you touch)
 
+**Basic hotel identity:**
 ```js
 hotelName:  "Hotel Sunrise",
 tagline:    "Fresh food, served with heart",
@@ -61,10 +63,26 @@ currency:   "₹",
 whatsapp:   "919876543210",  // Country code + number, no spaces, no +
 ```
 
+**Google Maps link (new in V4.1):**
+```js
+googleMapsLink: "https://maps.google.com/maps?q=your+hotel+address",
+```
+> A "Get Directions" button appears on the welcome screen using this link.
+
 **Enable home delivery and set delivery charge:**
 ```js
 homeDeliveryEnabled: true,
 deliveryCharge: 30,   // Charge in your currency — shown on delivery step and bill
+```
+
+**Control additional order rounds (new in V4.1):**
+```js
+deliveryOrderWindow: 10,      // minutes — delivery guests can add rounds within this window
+cancellationWindow: 10,       // minutes — orders can be cancelled within this time
+allowAdditionalRounds: {
+  dineIn: true,               // dine-in guests can always add more rounds
+  delivery: true,             // delivery guests governed by deliveryOrderWindow above
+},
 ```
 
 **Enable GST (optional):**
@@ -80,9 +98,14 @@ gst: {
 **Change colors to match your hotel brand:**
 ```js
 theme: {
-  accent:     "#C9A84C",   // Primary color — buttons, active tabs, prices
-  accentDark: "#8a6f32",   // Darker shade of accent
-  accentText: "#0a0706",   // Text ON accent buttons — use #ffffff for dark accents
+  accent:       "#C9A84C",   // Primary color — buttons, active tabs, prices
+  accentDark:   "#8a6f32",   // Darker shade of accent
+  accentText:   "#0a0706",   // Text ON accent buttons — use #ffffff for dark accents
+  bgColor:      "#0a0a0a",   // Page background (new in V4.1)
+  surfaceColor: "#111111",   // Card / surface background (new in V4.1)
+  borderColor:  "#2a2a2a",   // Borders and dividers (new in V4.1)
+  textPrimary:  "#F2EDE0",   // Main text color (new in V4.1)
+  textMuted:    "#a09880",   // Secondary / muted text (new in V4.1)
 }
 ```
 
@@ -104,18 +127,26 @@ Ocean Teal:       accent=#0d9488  accentDark=#0a7063  accentText=#ffffff
   name:      "Paneer Tikka",
   price:     320,                             // Number only, no ₹
   desc:      "Grilled cottage cheese with spices",
-  img:       "images/menu/paneer-tikka.jpg",  // From project root
+  img:       "images/menu/paneer-tikka.jpg",  // Local path OR a full URL
   type:      "veg",                           // "veg" or "nveg"
   badge:     "Chef's Pick",                   // Or: "Bestseller" | "New" | "Spicy 🌶️" | ""
   available: true,                            // false = greyed out, can't order
 },
 ```
 
+**Using online image URLs (new in V4.1):**
+The default `config.js` uses CDN/URL-hosted images instead of local files, so you can get started without uploading any photos. Just paste a direct image URL in the `img` field:
+```js
+img: "https://example.com/your-food-photo.jpg",
+```
+Use `config_with_local_image.js` if you prefer local `/images/menu/` files.
+
 **Turn off a form field** (e.g. if you don't need mobile number):
 ```js
 guestForm: {
   askName:   true,    // true = show, false = hide
   askMobile: false,   // hidden — guests won't see it
+  askTable:  false,   // Table is captured in the order flow, not here
 },
 ```
 
@@ -128,7 +159,7 @@ guestForm: {
 **Option B — Run a local server** *(recommended, tests images properly)*:
 ```bash
 # Python (built-in on Mac/Linux)
-cd hotel-menu
+cd Hotel_V4.1
 python3 -m http.server 8080
 # Then open: http://localhost:8080
 
@@ -169,6 +200,30 @@ After the first order is placed:
 - This makes it clear to kitchen staff it's an add-on to an existing table
 - For home delivery, **delivery charge is only applied on the first round** — add-on rounds are free
 
+**Controlling additional rounds (new in V4.1):**
+- Dine-in guests can always add more rounds (set `allowAdditionalRounds.dineIn: false` to disable)
+- Delivery guests can add more rounds only within `deliveryOrderWindow` minutes of the first order
+- A toast notification is shown if a delivery guest tries to reorder after the window closes
+
+---
+
+## ❌ ORDER CANCELLATION (New in V4.1)
+
+Guests can cancel a placed order within the `cancellationWindow` (default: 10 minutes):
+- The **bill screen** shows a cancel option per round while within the window
+- Cancelling a round removes it from the bill and adjusts the grand total
+- After the window expires, the cancel option is hidden automatically
+- Useful for cases where a guest accidentally sends a duplicate order
+
+---
+
+## 🗺️ GOOGLE MAPS INTEGRATION (New in V4.1)
+
+Set `googleMapsLink` in config to your hotel's Google Maps URL:
+- A **"Get Directions"** button appears on the welcome screen
+- Tapping it opens Google Maps directly on the guest's phone
+- Leave as `"https://maps.google.com"` to link to the Maps homepage if you don't have a specific pin
+
 ---
 
 ## 🧾 BILL GENERATION
@@ -199,6 +254,23 @@ Grand Total    =  Food Subtotal + CGST + SGST + Delivery
 
 ---
 
+## 🎨 FULL THEME CUSTOMISATION (New in V4.1)
+
+V4.1 exposes the full dark-mode palette in `config.js`, so you can match your hotel's branding completely without touching CSS:
+
+| Key | Default | Controls |
+|-----|---------|----------|
+| `accent` | `#C9A84C` | Buttons, active tabs, prices, highlights |
+| `accentDark` | `#8a6f32` | Pressed/hover state of accent elements |
+| `accentText` | `#0a0706` | Text color on accent-colored buttons |
+| `bgColor` | `#0a0a0a` | Full page background |
+| `surfaceColor` | `#111111` | Cards, drawers, modals |
+| `borderColor` | `#2a2a2a` | Dividers and borders |
+| `textPrimary` | `#F2EDE0` | Headings and primary text |
+| `textMuted` | `#a09880` | Labels, descriptions, secondary text |
+
+---
+
 ## 🏨 DEPLOYING FOR MULTIPLE HOTELS
 
 Each hotel gets its **own folder** — everything else is identical:
@@ -210,7 +282,7 @@ my-menus/
 └── hotel-golden-leaf/     ← Green theme, multi-cuisine
 ```
 
-Copy the entire `hotel-menu/` folder, rename it, then:
+Copy the entire `Hotel_V4.1/` folder, rename it, then:
 1. Replace images in `/images/` and `/images/menu/`
 2. Edit `js/config.js` (hotel name, WhatsApp, colors, menu items)
 3. Done!
@@ -239,8 +311,10 @@ Once live, generate a QR code for the URL at [qr-code-generator.com](https://www
 | Colors not updating | Hard-refresh browser: `Ctrl+Shift+R` (Windows) or `Cmd+Shift+R` (Mac) |
 | Logo not showing | App auto-hides it if image fails — check `images/logo.png` exists with correct name |
 | Cart bar disappears after order | Expected behaviour on bill/success screens. Returns when back on menu screen. |
+| Delivery guest can't reorder | Check `deliveryOrderWindow` — window may have expired. Increase the value in config. |
+| Cancel button not showing | Order may be outside `cancellationWindow`. Increase the value in config for testing. |
+| Google Maps button missing | Ensure `googleMapsLink` is set in config.js and `index.html` has the map button element. |
 | Back button in delivery step not working | Ensure `showOrderStep` is exported in `app.js` return object and `index.html` calls `App.showOrderStep('stepChoose')` |
-| Delivery charge showing ₹0 on round 2 | Ensure `_updateDeliveryTotals()` uses `HOTEL_CONFIG.deliveryCharge` directly, not `isAddOnRound ? 0 : charge` |
 | Bill total different from order total | Ensure GST is calculated on `foodOnly` (before delivery is added) in both `_buildBillData()` and `placeOrder()` |
 | PDF subtotal incorrect | Ensure `_generatePDF()` uses `d.foodSubtotal` instead of `d.grandTotal - d.deliveryCharge` |
 
@@ -255,3 +329,17 @@ Once live, generate a QR code for the URL at [qr-code-generator.com](https://www
 | Logo | `images/logo.png` | ~200×80px | PNG | Transparent background preferred |
 | Favicon | `images/favicon.png` | 64×64px | PNG | Square, simple icon |
 | Food items | `images/menu/*.jpg` | 400×400px | JPG | Square crop, keep under 150KB each |
+
+---
+
+## 🆕 WHAT'S NEW IN V4.1
+
+| Feature | Description |
+|---------|-------------|
+| **Order Cancellation** | Guests can cancel a round within `cancellationWindow` minutes |
+| **Delivery Order Window** | Delivery add-on rounds restricted to `deliveryOrderWindow` minutes |
+| **Fine-grained Round Control** | `allowAdditionalRounds.dineIn` and `.delivery` toggle extra rounds independently |
+| **Google Maps Integration** | `googleMapsLink` config field powers a "Get Directions" button on the welcome screen |
+| **Full Theme Palette** | `bgColor`, `surfaceColor`, `borderColor`, `textPrimary`, `textMuted` now all configurable |
+| **URL Image Support** | Menu items can use CDN/URL images — no local file upload required |
+| **Separate Local-Image Config** | `config_with_local_image.js` provided as an alternative for local-file setups |
